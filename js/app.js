@@ -918,6 +918,7 @@ function setupNavigation() {
             const group2 = document.getElementById('nav-group-mod2');
             const indicator = document.getElementById('course-section-indicator');
 
+            if (window.TTSController) window.TTSController.stop();
             document.querySelectorAll('.content-section').forEach(sec => sec.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
 
@@ -966,6 +967,7 @@ function setupNavigation() {
             item.classList.add('active');
 
             const targetId = item.getAttribute('data-target');
+            if (window.TTSController) window.TTSController.stop();
             document.querySelectorAll('.content-section').forEach(sec => sec.classList.remove('active'));
             const activeSec = document.getElementById(targetId);
             if (activeSec) {
@@ -1252,6 +1254,7 @@ function rafThrottle(fn) {
 
 document.addEventListener('DOMContentLoaded', () => {
     setupNavigation();
+    TTSController.init();
 
     // Инициализация калькулятора Гаусса со встроенной сеткой
     const selectRows = document.getElementById('gauss-select-rows');
@@ -3781,3 +3784,533 @@ function runLab3Experiment(studentId) {
         }
     }
 }
+
+// =========================================================================
+// [TTS] Модуль озвучивания лекций (Text-to-Speech) через Web Speech API
+// =========================================================================
+
+/**
+ * Конвертер формул LaTeX в естественную русскую речь
+ */
+function latexToSpokenRussian(tex) {
+    if (!tex) return '';
+    let s = tex.trim();
+
+    // Снятие стилевых обёрток
+    s = s.replace(/\\(?:text|mathrm|mathbf|boldsymbol|textbf|operatorname)\{([^}]*)\}/g, '$1');
+
+    // Пространства и множества
+    s = s.replace(/\\mathbb\{R\}\^\{m\s*\\times\s*n\}|\\mathbb\{R\}\^\{mn\}/gi, 'пространство матриц размера эм на эн ');
+    s = s.replace(/\\mathbb\{R\}\^n/gi, 'пространство эр эн ');
+    s = s.replace(/\\mathbb\{R\}\^2/gi, 'эр два ');
+    s = s.replace(/\\mathbb\{R\}\^3/gi, 'эр три ');
+    s = s.replace(/\\mathbb\{R\}\^d/gi, 'пространство эр дэ ');
+    s = s.replace(/\\mathbb\{R\}\^k/gi, 'пространство эр ка ');
+    s = s.replace(/\\mathbb\{R\}/gi, 'множество вещественных чисел эр ');
+    s = s.replace(/\\mathcal\{P\}_k/gi, 'пространство многочленов степени ка ');
+    s = s.replace(/C\[a,\s*b\]/gi, 'пространство непрерывных функций на отрезке а бэ ');
+
+    // Операторы и характеристики
+    s = s.replace(/\\operatorname\{Span\}|Span/gi, 'линейная оболочка спан ');
+    s = s.replace(/\\operatorname\{rank\}|rank/gi, 'ранг ');
+    s = s.replace(/\\operatorname\{dim\}|dim/gi, 'размерность ');
+    s = s.replace(/\\operatorname\{Ker\}|Ker/gi, 'ядро ');
+    s = s.replace(/\\operatorname\{Im\}|Im/gi, 'образ ');
+    s = s.replace(/\\operatorname\{tr\}|\btr\b/gi, 'след ');
+    s = s.replace(/\\det\b/gi, 'определитель ');
+    s = s.replace(/\\cos\b/g, 'косинус ');
+    s = s.replace(/\\sin\b/g, 'синус ');
+
+    // Нормы
+    s = s.replace(/\\\|([^\\|]+)\\\|_\{?\\infty\}?/g, 'норма $1 бесконечность ');
+    s = s.replace(/\\\|([^\\|]+)\\\|_2\^2/g, 'квадрат евклидовой нормы $1 ');
+    s = s.replace(/\\\|([^\\|]+)\\\|_2/g, 'евклидова норма $1 ');
+    s = s.replace(/\\\|([^\\|]+)\\\|_1/g, 'эль один норма $1 ');
+    s = s.replace(/\\\|([^\\|]+)\\\|_p/g, 'норма $1 по пэ ');
+    s = s.replace(/\\\|([^\\|]+)\\\|_\{([^}]+)\}/g, 'норма $1 по $2 ');
+    s = s.replace(/\\\|([^\\|]+)\\\|/g, 'норма $1 ');
+
+    // Скалярные произведения
+    s = s.replace(/\\langle\s*([^,]+),\s*([^\\>]+)\s*\\rangle/g, 'скалярное произведение $1 и $2 ');
+    s = s.replace(/\\langle\s*\\cdot\s*,\s*\\cdot\s*\\rangle/g, 'скалярное произведение ');
+
+    // Дроби и корни
+    s = s.replace(/\\frac\{1\}\{\\sqrt\{d_k\}\}/gi, 'единица делённая на корень из дэ ка ');
+    s = s.replace(/\\frac\{1\}\{2\}/g, 'одна вторая ');
+    s = s.replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '$1 делённое на $2 ');
+    s = s.replace(/\\sqrt\{([^}]+)\}/g, 'корень из $1 ');
+
+    // Суммы
+    s = s.replace(/\\sum_\{([^}]+)\}\^\{([^}]+)\}/g, 'сумма от $1 до $2 ');
+    s = s.replace(/\\sum/g, 'сумма ');
+
+    // Логика и отношения
+    s = s.replace(/\\implies/g, ' следовательно ');
+    s = s.replace(/\\iff/g, ' тогда и только тогда, когда ');
+    s = s.replace(/\\subset(?:eq)?/g, ' является подмножеством ');
+    s = s.replace(/\\in/g, ' принадлежит ');
+    s = s.replace(/\\notin/g, ' не принадлежит ');
+    s = s.replace(/\\ne\b|\\neq\b/g, ' не равно ');
+    s = s.replace(/\\le\b|\\leq\b/g, ' меньше либо равно ');
+    s = s.replace(/\\ge\b|\\geq\b/g, ' больше либо равно ');
+    s = s.replace(/\\approx/g, ' приближённо равно ');
+    s = s.replace(/\\times/g, ' на ');
+    s = s.replace(/\\cdot/g, ' умножить на ');
+    s = s.replace(/\\pm/g, ' плюс-минус ');
+    s = s.replace(/\\to\b/g, ' в ');
+    s = s.replace(/\\quad|\\qquad/g, ', ');
+
+    // Греческие буквы
+    s = s.replace(/\\alpha/g, 'альфа ');
+    s = s.replace(/\\beta/g, 'бета ');
+    s = s.replace(/\\gamma/g, 'гамма ');
+    s = s.replace(/\\lambda/g, 'лямбда ');
+    s = s.replace(/\\theta/g, 'тэта ');
+    s = s.replace(/\\sigma/g, 'сигма ');
+    s = s.replace(/\\varepsilon|\\epsilon/g, 'эпсилон ');
+    s = s.replace(/\\mu/g, 'мю ');
+    s = s.replace(/\\Delta/g, 'дельта ');
+
+    // Степени и транспонирование
+    s = s.replace(/([A-Za-z0-9_]+)\^T\b/g, '$1 транспонированное ');
+    s = s.replace(/([A-Za-z0-9_]+)\^\{-1\}/g, 'обратная матрица к $1 ');
+    s = s.replace(/([A-Za-z0-9_]+)\^2\b/g, '$1 в квадрате ');
+    s = s.replace(/([A-Za-z0-9_]+)\^3\b/g, '$1 в кубе ');
+    s = s.replace(/([A-Za-z0-9_]+)\^([a-zA-Z0-9])/g, '$1 в степени $2 ');
+
+    // Индексы
+    s = s.replace(/([a-zA-Z])_\{?([0-9]+)\}?/g, '$1 $2 ');
+    s = s.replace(/([a-zA-Z])_\{?([a-zA-Z]+)\}?/g, '$1 с индексом $2 ');
+
+    // Названия ключевых латинских переменных для чистого звучания
+    s = s.replace(/\bu\b/g, 'у');
+    s = s.replace(/\bv\b/g, 'вэ');
+    s = s.replace(/\bw\b/g, 'дубль-вэ');
+    s = s.replace(/\bx\b/g, 'икс');
+    s = s.replace(/\by\b/g, 'игрек');
+    s = s.replace(/\bz\b/g, 'зет');
+
+    // Базовые операции
+    s = s.replace(/=/g, ' равно ');
+    s = s.replace(/\+/g, ' плюс ');
+    s = s.replace(/-/g, ' минус ');
+    s = s.replace(/\*/g, ' умножить на ');
+
+    // Очистка остатков TeX-синтаксиса
+    s = s.replace(/\\[a-zA-Z]+/g, ' ');
+    s = s.replace(/[{}]/g, ' ');
+    s = s.replace(/\s+/g, ' ').trim();
+
+    return s;
+}
+
+/**
+ * Извлечение читаемого текста из HTML-элемента с преобразованием формул KaTeX
+ */
+function cleanElementTextForTTS(element) {
+    if (!element) return '';
+    const clone = element.cloneNode(true);
+
+    // Удаляем из клона кнопки, селекты, индикаторы плеера, если они попали внутрь
+    clone.querySelectorAll('.tts-player, button, select, input, .plot-container').forEach(el => el.remove());
+
+    // Заменяем все KaTeX элементы на их текстовое русское звучание
+    clone.querySelectorAll('.katex').forEach(katexEl => {
+        const annotation = katexEl.querySelector('annotation');
+        let tex = annotation ? annotation.textContent : '';
+        if (!tex) {
+            tex = katexEl.innerText || '';
+        }
+        const spoken = latexToSpokenRussian(tex);
+        katexEl.replaceWith(document.createTextNode(' ' + spoken + ' '));
+    });
+
+    // Обрабатываем нескомпилированные формулы $...$ и $$...$$
+    let htmlText = clone.innerHTML || '';
+    htmlText = htmlText.replace(/\$\$([\s\S]*?)\$\$/g, (_, tex) => ' ' + latexToSpokenRussian(tex) + ' ');
+    htmlText = htmlText.replace(/\$([^\$]+)\$/g, (_, tex) => ' ' + latexToSpokenRussian(tex) + ' ');
+
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = htmlText;
+    let text = tempDiv.textContent || tempDiv.innerText || '';
+
+    // Превращаем маркеры списков и спецсимволы в естественные паузы
+    text = text.replace(/[•✓►▶⏹⏸★]/g, ' ');
+    text = text.replace(/→/g, ' переходит в ');
+    text = text.replace(/—/g, ' — ');
+    text = text.replace(/\s+/g, ' ').trim();
+
+    // Добавляем точку в конец, если нет знака препинания (для интонационной паузы)
+    if (text && !/[.!?…;]$/.test(text)) {
+        text += '.';
+    }
+
+    return text;
+}
+
+/**
+ * Разбивка длинного текста на небольшие предложения (решает проблему зависания SpeechSynthesis в Chromium)
+ */
+function splitIntoSpeechSentences(text) {
+    if (!text) return [];
+    // Делим по знакам конца предложений
+    const parts = text.split(/(?<=[.!?…;])\s+/);
+    const sentences = [];
+    let cur = '';
+
+    for (let part of parts) {
+        part = part.trim();
+        if (!part) continue;
+        if (cur.length + part.length < 180) {
+            cur = cur ? (cur + ' ' + part) : part;
+        } else {
+            if (cur) sentences.push(cur);
+            cur = part;
+        }
+    }
+    if (cur) sentences.push(cur);
+    return sentences;
+}
+
+/**
+ * Главный контроллер озвучивания лекций (Audiobook Player)
+ */
+function cleanVoiceLabel(v) {
+    if (!v || !v.name) return 'По умолчанию';
+    const name = v.name;
+    if (name.includes('Dmitry') && name.includes('Natural')) return 'Дмитрий (Natural ⭐)';
+    if (name.includes('Svetlana') && name.includes('Natural')) return 'Светлана (Natural ⭐)';
+    if (name.includes('Google') && (name.includes('ru') || name.includes('русский'))) return 'Google русский ⭐';
+    if (name.includes('Yandex')) return 'Яндекс голос ⭐';
+    if (name.includes('Irina')) return 'Ирина (Windows)';
+    if (name.includes('Pavel')) return 'Павел (Windows)';
+    if (name.includes('Dmitry')) return 'Дмитрий';
+    if (name.includes('Svetlana')) return 'Светлана';
+    const cleaned = name.replace(/Microsoft|Desktop|Online|\(Natural\)|\(Russia\)|Russian/gi, '').trim();
+    return cleaned || name;
+}
+
+const TTSController = {
+    activeSectionId: null,
+    blocks: [],
+    blockIndex: 0,
+    sentences: [],
+    sentenceIndex: 0,
+    isPlaying: false,
+    isPaused: false,
+    speechRate: 1.0,
+    voice: null,
+    voicesList: [],
+    heartbeatInterval: null,
+
+    init() {
+        if (!('speechSynthesis' in window)) {
+            console.warn('[TTS] Web Speech API не поддерживается данным браузером.');
+            document.querySelectorAll('.tts-player').forEach(p => p.style.display = 'none');
+            return;
+        }
+
+        this.initVoices();
+        if (speechSynthesis.onvoiceschanged !== undefined) {
+            speechSynthesis.onvoiceschanged = () => this.initVoices();
+        }
+
+        // Восстанавливаем сохранённую скорость
+        try {
+            const savedRate = localStorage.getItem('tts_preferred_rate');
+            if (savedRate) {
+                this.speechRate = parseFloat(savedRate) || 1.0;
+                document.querySelectorAll('.tts-speed-select').forEach(sel => sel.value = this.speechRate);
+            }
+        } catch(e) {}
+
+        // Привязываем события ко всем плеерам в DOM
+        document.querySelectorAll('.tts-player').forEach(player => {
+            const secId = player.getAttribute('data-section');
+            const playBtn = player.querySelector('.btn-tts-play');
+            const stopBtn = player.querySelector('.btn-tts-stop');
+            const speedSel = player.querySelector('.tts-speed-select');
+            const voiceSel = player.querySelector('.tts-voice-select');
+
+            playBtn?.addEventListener('click', () => {
+                if (this.isPlaying && this.activeSectionId === secId) {
+                    if (this.isPaused) {
+                        this.resume();
+                    } else {
+                        this.pause();
+                    }
+                } else {
+                    this.playSection(secId);
+                }
+            });
+
+            stopBtn?.addEventListener('click', () => {
+                this.stop();
+            });
+
+            voiceSel?.addEventListener('change', (e) => {
+                const selectedName = e.target.value;
+                const found = this.voicesList?.find(v => v.name === selectedName);
+                if (found) {
+                    this.voice = found;
+                    try { localStorage.setItem('tts_preferred_voice', found.name); } catch(err) {}
+                    document.querySelectorAll('.tts-voice-select').forEach(s => s.value = found.name);
+                    if (this.isPlaying && !this.isPaused) {
+                        window.speechSynthesis.cancel();
+                        this.speakCurrentSentence();
+                    }
+                }
+            });
+
+            speedSel?.addEventListener('change', (e) => {
+                this.speechRate = parseFloat(e.target.value) || 1.0;
+                try { localStorage.setItem('tts_preferred_rate', this.speechRate); } catch(err) {}
+                document.querySelectorAll('.tts-speed-select').forEach(sel => sel.value = this.speechRate);
+                if (this.isPlaying && !this.isPaused) {
+                    window.speechSynthesis.cancel();
+                    this.speakCurrentSentence();
+                }
+            });
+        });
+
+        // Запуск heartbeat-таймера для предотвращения зависания Chromium
+        this.heartbeatInterval = setInterval(() => {
+            if (window.speechSynthesis.speaking && !window.speechSynthesis.paused) {
+                window.speechSynthesis.pause();
+                window.speechSynthesis.resume();
+            }
+        }, 10000);
+    },
+
+    initVoices() {
+        const voices = window.speechSynthesis.getVoices();
+        if (!voices || voices.length === 0) return;
+
+        // Фильтруем русские голоса
+        let ruVoices = voices.filter(v => v.lang && (v.lang.toLowerCase().includes('ru') || v.lang.toLowerCase().includes('rus')));
+        if (ruVoices.length === 0) {
+            ruVoices = voices;
+        }
+
+        // Сортируем: Natural и Google наверх
+        ruVoices.sort((a, b) => {
+            const aScore = (a.name.includes('Natural') || a.name.includes('Google') || a.name.includes('Yandex')) ? 2 : 1;
+            const bScore = (b.name.includes('Natural') || b.name.includes('Google') || b.name.includes('Yandex')) ? 2 : 1;
+            return bScore - aScore;
+        });
+
+        this.voicesList = ruVoices;
+
+        // Восстанавливаем сохранённый голос
+        let matchedVoice = null;
+        try {
+            const savedVoiceName = localStorage.getItem('tts_preferred_voice');
+            matchedVoice = ruVoices.find(v => v.name === savedVoiceName);
+        } catch(e) {}
+
+        if (!matchedVoice) {
+            matchedVoice = ruVoices.find(v => v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Dmitry') || v.name.includes('Svetlana')) || ruVoices[0];
+        }
+        this.voice = matchedVoice;
+
+        // Заполняем все выпадающие списки на странице
+        document.querySelectorAll('.tts-voice-select').forEach(sel => {
+            sel.innerHTML = '';
+            ruVoices.forEach(v => {
+                const opt = document.createElement('option');
+                opt.value = v.name;
+                opt.textContent = cleanVoiceLabel(v);
+                if (matchedVoice && v.name === matchedVoice.name) {
+                    opt.selected = true;
+                }
+                sel.appendChild(opt);
+            });
+            if (matchedVoice) sel.value = matchedVoice.name;
+        });
+    },
+
+    getReadableBlocks(section) {
+        if (!section) return [];
+        const blocks = [];
+        const candidates = section.querySelectorAll('p:not(.section-subtitle), .callout, ul, ol');
+
+        candidates.forEach(el => {
+            if (el.closest('.tts-player') || el.closest('.interactive-card') || el.closest('.nav-pills') || el.closest('.tab-header')) {
+                return;
+            }
+            if (el.tagName === 'P' && el.closest('.callout')) return;
+            if ((el.tagName === 'UL' || el.tagName === 'OL') && el.closest('.callout')) return;
+
+            const text = cleanElementTextForTTS(el);
+            if (text && text.length > 5) {
+                blocks.push({ element: el, text: text });
+            }
+        });
+
+        return blocks;
+    },
+
+    playSection(sectionId) {
+        this.stop();
+
+        const section = document.getElementById(sectionId);
+        if (!section) return;
+
+        this.activeSectionId = sectionId;
+        this.blocks = this.getReadableBlocks(section);
+
+        if (this.blocks.length === 0) {
+            alert('В данном разделе нет текстовых параграфов для озвучивания.');
+            return;
+        }
+
+        this.blockIndex = 0;
+        this.isPlaying = true;
+        this.isPaused = false;
+
+        this.updatePlayerUI(sectionId, 'playing');
+        this.speakBlock(0);
+    },
+
+    speakBlock(index) {
+        if (!this.isPlaying || index >= this.blocks.length) {
+            this.finishPlayback();
+            return;
+        }
+
+        this.blockIndex = index;
+        const currentBlock = this.blocks[index];
+
+        this.clearHighlights();
+        currentBlock.element.classList.add('tts-reading-highlight');
+        currentBlock.element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        this.updateStatus(this.activeSectionId, `Абзац ${index + 1} из ${this.blocks.length}`);
+
+        this.sentences = splitIntoSpeechSentences(currentBlock.text);
+        this.sentenceIndex = 0;
+
+        this.speakCurrentSentence();
+    },
+
+    speakCurrentSentence() {
+        if (!this.isPlaying || this.sentenceIndex >= this.sentences.length) {
+            this.speakBlock(this.blockIndex + 1);
+            return;
+        }
+
+        const sentence = this.sentences[this.sentenceIndex];
+        const utterance = new SpeechSynthesisUtterance(sentence);
+        utterance.lang = 'ru-RU';
+        if (this.voice) utterance.voice = this.voice;
+        utterance.rate = this.speechRate;
+        utterance.pitch = 1.0;
+
+        utterance.onend = () => {
+            if (this.isPlaying && !this.isPaused) {
+                this.sentenceIndex++;
+                this.speakCurrentSentence();
+            }
+        };
+
+        utterance.onerror = (e) => {
+            console.warn('[TTS] Ошибка синтеза речи:', e);
+            if (this.isPlaying && !this.isPaused) {
+                this.sentenceIndex++;
+                this.speakCurrentSentence();
+            }
+        };
+
+        window.speechSynthesis.speak(utterance);
+    },
+
+    pause() {
+        if (!this.isPlaying || this.isPaused) return;
+        window.speechSynthesis.pause();
+        this.isPaused = true;
+        this.updatePlayerUI(this.activeSectionId, 'paused');
+        this.updateStatus(this.activeSectionId, 'Пауза');
+    },
+
+    resume() {
+        if (!this.isPlaying || !this.isPaused) return;
+        window.speechSynthesis.resume();
+        this.isPaused = false;
+        this.updatePlayerUI(this.activeSectionId, 'playing');
+        this.updateStatus(this.activeSectionId, `Абзац ${this.blockIndex + 1} из ${this.blocks.length}`);
+    },
+
+    stop() {
+        window.speechSynthesis.cancel();
+        this.clearHighlights();
+
+        if (this.activeSectionId) {
+            this.updatePlayerUI(this.activeSectionId, 'stopped');
+        }
+
+        this.isPlaying = false;
+        this.isPaused = false;
+        this.activeSectionId = null;
+        this.blocks = [];
+        this.blockIndex = 0;
+        this.sentences = [];
+        this.sentenceIndex = 0;
+    },
+
+    finishPlayback() {
+        this.clearHighlights();
+        if (this.activeSectionId) {
+            this.updateStatus(this.activeSectionId, 'Завершено ✓');
+            setTimeout(() => {
+                this.stop();
+            }, 2500);
+        } else {
+            this.stop();
+        }
+    },
+
+    clearHighlights() {
+        document.querySelectorAll('.tts-reading-highlight').forEach(el => el.classList.remove('tts-reading-highlight'));
+    },
+
+    updatePlayerUI(sectionId, state) {
+        const player = document.querySelector(`.tts-player[data-section="${sectionId}"]`);
+        if (!player) return;
+
+        const playBtn = player.querySelector('.btn-tts-play');
+        const stopBtn = player.querySelector('.btn-tts-stop');
+        const meta = player.querySelector('.tts-meta');
+        const playText = playBtn?.querySelector('.tts-text');
+        const playIcon = playBtn?.querySelector('.tts-icon');
+
+        if (state === 'playing') {
+            player.classList.add('is-active');
+            if (stopBtn) stopBtn.style.display = 'inline-flex';
+            if (meta) meta.style.display = 'inline-flex';
+            if (playBtn) playBtn.classList.add('is-playing');
+            if (playText) playText.textContent = 'Пауза';
+            if (playIcon) playIcon.textContent = '⏸';
+        } else if (state === 'paused') {
+            if (playBtn) playBtn.classList.remove('is-playing');
+            if (playText) playText.textContent = 'Продолжить';
+            if (playIcon) playIcon.textContent = '▶';
+        } else if (state === 'stopped') {
+            player.classList.remove('is-active');
+            if (stopBtn) stopBtn.style.display = 'none';
+            if (meta) meta.style.display = 'none';
+            if (playBtn) {
+                playBtn.classList.remove('is-playing');
+                if (playText) playText.textContent = 'Прослушать раздел';
+                if (playIcon) playIcon.textContent = '▶';
+            }
+        }
+    },
+
+    updateStatus(sectionId, text) {
+        const player = document.querySelector(`.tts-player[data-section="${sectionId}"]`);
+        const statusEl = player?.querySelector('.tts-status-text');
+        if (statusEl) statusEl.textContent = text;
+    }
+};
+
+window.TTSController = TTSController;

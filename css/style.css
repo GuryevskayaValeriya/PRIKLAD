@@ -668,3 +668,167 @@ table.data-table tr:nth-child(even) {
     margin-bottom: 0.45rem;
 }
 
+
+/* ==========================================================================
+   Text-to-Speech (TTS) Озвучивание лекций (Модуль 1)
+   ========================================================================== */
+
+.tts-player {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+    background: linear-gradient(135deg, #fbf8f4 0%, #f4ece4 100%);
+    border: 1px solid #e2d5c7;
+    border-radius: 9px;
+    padding: 0.65rem 1rem;
+    margin: 1rem 0 1.5rem 0;
+    box-shadow: 0 2px 6px rgba(117, 82, 60, 0.04);
+    transition: all 0.25s ease;
+}
+
+.tts-player.is-active {
+    border-color: var(--primary);
+    box-shadow: 0 3px 12px rgba(117, 82, 60, 0.12);
+    background: linear-gradient(135deg, #fffdfa 0%, #f7efe6 100%);
+}
+
+.btn-tts {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.45rem 1rem;
+    font-size: 0.88rem;
+    font-weight: 600;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+    font-family: inherit;
+}
+
+.btn-tts-play {
+    background: var(--primary);
+    color: #ffffff;
+}
+
+.btn-tts-play:hover {
+    background: var(--primary-hover);
+    transform: translateY(-1px);
+}
+
+.btn-tts-play.is-playing {
+    background: #8b5e3c;
+    animation: ttsPlayPulse 2s infinite ease-in-out;
+}
+
+@keyframes ttsPlayPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(117, 82, 60, 0.4); }
+    50% { box-shadow: 0 0 0 5px rgba(117, 82, 60, 0); }
+}
+
+.btn-tts-stop {
+    background: #ffffff;
+    color: var(--danger);
+    border: 1px solid #e0c8be;
+}
+
+.btn-tts-stop:hover {
+    background: #fdf2f0;
+    border-color: var(--danger);
+}
+
+.tts-meta {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-left: auto;
+    font-size: 0.84rem;
+    color: var(--text-secondary);
+}
+
+.tts-speed-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    cursor: pointer;
+    font-size: 0.82rem;
+    font-weight: 500;
+}
+
+.tts-speed-select {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.82rem;
+    border-radius: 5px;
+    border: 1px solid #d9cebf;
+    background: #ffffff;
+    color: var(--text-main);
+    cursor: pointer;
+    outline: none;
+}
+
+.tts-speed-select:focus {
+    border-color: var(--border-focus);
+}
+
+.tts-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--primary);
+}
+
+.tts-pulse-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--primary);
+    display: inline-block;
+    animation: ttsBlink 1.2s infinite ease-in-out;
+}
+
+@keyframes ttsBlink {
+    0%, 100% { opacity: 0.3; transform: scale(0.85); }
+    50% { opacity: 1; transform: scale(1.2); }
+}
+
+/* Подсветка текущего читаемого абзаца (эффект аудиокниги) */
+.tts-reading-highlight {
+    background-color: rgba(184, 134, 59, 0.14) !important;
+    border-left: 4px solid var(--primary) !important;
+    padding-left: 0.9rem !important;
+    border-radius: 4px !important;
+    transition: background-color 0.25s ease, border-left 0.25s ease, padding 0.25s ease !important;
+    box-shadow: 0 2px 8px rgba(117, 82, 60, 0.08) !important;
+}
+
+.tts-voice-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    cursor: pointer;
+    font-size: 0.82rem;
+    font-weight: 500;
+}
+
+.tts-voice-select {
+    max-width: 170px;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.82rem;
+    border-radius: 5px;
+    border: 1px solid #d9cebf;
+    background: #ffffff;
+    color: var(--text-main);
+    cursor: pointer;
+    outline: none;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.tts-voice-select:focus {
+    border-color: var(--border-focus);
+}
