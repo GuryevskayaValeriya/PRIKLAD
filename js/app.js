@@ -1006,6 +1006,9 @@ function triggerRenderForSection(sectionId) {
         const c2 = parseFloat(document.getElementById('slider-slau-c2')?.value || 0);
         renderSlau3D(c1, c2);
     } else if (sectionId === 'sec-2-4') {
+        renderCanonicalOperators2D();
+        updateLinearOperatorStand();
+    } else if (sectionId === 'sec-2-4') {
         const type = document.getElementById('select-operator-type')?.value || 'rotate';
         const angle = parseFloat(document.getElementById('slider-op-angle')?.value || 45);
         renderLinearOperator2D(type, angle);
@@ -1433,18 +1436,8 @@ document.addEventListener('DOMContentLoaded', () => {
     sliderSlauC1?.addEventListener('input', updateSlauPlot);
     sliderSlauC2?.addEventListener('input', updateSlauPlot);
 
-    // 2.4 Геометрический оператор 2D
-    const selectOp = document.getElementById('select-operator-type');
-    const sliderOpAngle = document.getElementById('slider-op-angle');
-    const updateOperatorPlot = rafThrottle(() => {
-        const type = selectOp?.value || 'rotate';
-        const angle = parseFloat(sliderOpAngle?.value || 45);
-        const valSpan = document.getElementById('val-op-angle');
-        if (valSpan) valSpan.textContent = angle;
-        renderLinearOperator2D(type, angle);
-    });
-    selectOp?.addEventListener('change', updateOperatorPlot);
-    sliderOpAngle?.addEventListener('input', updateOperatorPlot);
+    // 2.4 Интерактивный трансформер 2D
+    initLinearOperatorStandControls();
 
     // 2.6 Процесс Грама-Шмидта (пошаговая ортогонализация Шаги 0-4)
     document.getElementById('btn-gs-step0')?.addEventListener('click', () => renderGramSchmidt3D(0));
@@ -1499,7 +1492,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Первичный рендер визуализаций Модуля 2
     renderSlau3D(0, 0);
-    renderLinearOperator2D('rotate', 45);
+    renderCanonicalOperators2D();
+    updateLinearOperatorStand();
     renderGramSchmidt3D(4);
     renderOrthogonalProjection3D(2, 3, 4);
     renderConditionExperiment(7);
@@ -1853,9 +1847,513 @@ function renderSlau3D(c1 = 0, c2 = 0) {
 }
 
 // -------------------------------------------------------------------------
-// [2.4] 2D Линейные операторы (Вращение, Масштаб, Сдвиг, Отражение, Проектор)
+// [2.4] Визуализации 4 канонических операторов из лекции (1 2 3 4 в столбик)
 // -------------------------------------------------------------------------
-function renderLinearOperator2D(opType = 'rotate', param = 45) {
+
+function renderCanonRotatePlot() {
+    const container = document.getElementById('plot-canon-rotate');
+    if (!container) return;
+
+    // Матрица поворота R(90°): [0, -1; 1, 0]
+    // Вектор v = (3, 4) -> Rv = (-4, 3)
+    const v = [3, 4];
+    const Rv = [-4, 3];
+
+    // Дуга поворота радиуса 5 от 53.13° до 143.13°
+    const arcX = [], arcY = [];
+    const thStart = Math.atan2(4, 3);
+    const thEnd = thStart + Math.PI / 2;
+    const nArc = 36;
+    for (let i = 0; i <= nArc; i++) {
+        const th = thStart + (thEnd - thStart) * (i / nArc);
+        arcX.push(5 * Math.cos(th));
+        arcY.push(5 * Math.sin(th));
+    }
+
+    // Окружность радиуса 5 (сохранение длины)
+    const circ5X = [], circ5Y = [];
+    for (let i = 0; i <= 60; i++) {
+        const th = (2 * Math.PI * i) / 60;
+        circ5X.push(5 * Math.cos(th));
+        circ5Y.push(5 * Math.sin(th));
+    }
+
+    const traceCirc5 = {
+        x: circ5X, y: circ5Y, mode: 'lines',
+        line: { color: '#d9cebf', width: 1.5, dash: 'dot' },
+        hoverinfo: 'none',
+        name: 'Сфера нормы ||x|| = 5'
+    };
+
+    const traceArc = {
+        x: arcX, y: arcY, mode: 'lines',
+        line: { color: '#b8863b', width: 2.5, dash: 'dash' },
+        name: 'Дуга поворота +90°'
+    };
+
+    const traceV = {
+        x: [0, v[0]], y: [0, v[1]], mode: 'lines+markers+text',
+        line: { color: '#205493', width: 4.5 },
+        marker: { size: [3, 9], color: '#205493' },
+        text: ['', 'v = (3, 4)'], textposition: 'top right',
+        name: 'Исходный вектор v (||v||=5)'
+    };
+
+    const traceRv = {
+        x: [0, Rv[0]], y: [0, Rv[1]], mode: 'lines+markers+text',
+        line: { color: '#75523c', width: 4.5 },
+        marker: { size: [3, 9], color: '#75523c' },
+        text: ['', 'Rv = (-4, 3)'], textposition: 'top left',
+        name: 'Повёрнутый Rv (||Rv||=5)'
+    };
+
+    const traceRe1 = {
+        x: [0, 0], y: [0, 1], mode: 'lines+markers+text',
+        line: { color: '#b34a3b', width: 3 },
+        marker: { size: [2, 7], color: '#b34a3b' },
+        text: ['', 'Re₁=(0,1)'], textposition: 'bottom right',
+        name: 'Re₁'
+    };
+
+    const traceRe2 = {
+        x: [0, -1], y: [0, 0], mode: 'lines+markers+text',
+        line: { color: '#5f7a4e', width: 3 },
+        marker: { size: [2, 7], color: '#5f7a4e' },
+        text: ['', 'Re₂=(-1,0)'], textposition: 'bottom left',
+        name: 'Re₂'
+    };
+
+    const layout = {
+        title: { text: '<b>Поворот R₉₀°:</b> v(3, 4) → Rv(-4, 3), det = 1', font: { size: 13, color: '#2a1d17' } },
+        height: 380,
+        margin: { l: 35, r: 35, t: 45, b: 35 },
+        autosize: true,
+        xaxis: { range: [-5.6, 5.6], zeroline: true, zerolinecolor: '#4a3b32', zerolinewidth: 1.5, gridcolor: '#f0e9df' },
+        yaxis: { range: [-5.6, 5.6], scaleanchor: 'x', scaleratio: 1, zeroline: true, zerolinecolor: '#4a3b32', zerolinewidth: 1.5, gridcolor: '#f0e9df' },
+        template: 'plotly_white',
+        paper_bgcolor: 'rgba(0,0,0,0)',
+        plot_bgcolor: 'rgba(0,0,0,0)',
+        font: { family: 'Inter, sans-serif' },
+        annotations: [
+            {
+                x: arcX[Math.floor(arcX.length / 2)],
+                y: arcY[Math.floor(arcY.length / 2)] + 0.35,
+                text: '<b>+90°</b>',
+                showarrow: false,
+                font: { color: '#b8863b', size: 12, weight: 'bold' }
+            }
+        ],
+        showlegend: false
+    };
+
+    Plotly.react(container, [traceCirc5, traceArc, traceV, traceRv, traceRe1, traceRe2], layout, { responsive: true, displayModeBar: false });
+}
+
+function renderCanonReflectPlot() {
+    const container = document.getElementById('plot-canon-reflect');
+    if (!container) return;
+
+    // Матрица отражения S: [0, 1; 1, 0]
+    // Вектор v = (5, 2) -> Sv = (2, 5)
+    const v = [5, 2];
+    const Sv = [2, 5];
+    const mid = [3.5, 3.5];
+
+    // Зеркальная ось y = x
+    const traceAxis = {
+        x: [-1.2, 6.4], y: [-1.2, 6.4], mode: 'lines',
+        line: { color: '#b8863b', width: 2.5, dash: 'dash' },
+        name: 'Зеркало y = x'
+    };
+
+    // Отрезок соединяющий v и Sv (ортогонален оси y=x)
+    const traceDisplacement = {
+        x: [v[0], Sv[0]], y: [v[1], Sv[1]], mode: 'lines',
+        line: { color: '#c5221f', width: 2, dash: 'dot' },
+        name: 'Невязка ⊥ y=x'
+    };
+
+    // Точка середины M(3.5, 3.5)
+    const traceMid = {
+        x: [mid[0]], y: [mid[1]], mode: 'markers+text',
+        marker: { size: 9, color: '#b8863b', symbol: 'diamond' },
+        text: ['M(3.5, 3.5)'], textposition: 'bottom right',
+        name: 'Середина M ∈ {y=x}'
+    };
+
+    const traceV = {
+        x: [0, v[0]], y: [0, v[1]], mode: 'lines+markers+text',
+        line: { color: '#205493', width: 4.5 },
+        marker: { size: [3, 9], color: '#205493' },
+        text: ['', 'v = (5, 2)'], textposition: 'bottom right',
+        name: 'Исходный вектор v'
+    };
+
+    const traceSv = {
+        x: [0, Sv[0]], y: [0, Sv[1]], mode: 'lines+markers+text',
+        line: { color: '#75523c', width: 4.5 },
+        marker: { size: [3, 9], color: '#75523c' },
+        text: ['', 'Sv = (2, 5)'], textposition: 'top left',
+        name: 'Отражённый Sv'
+    };
+
+    const traceSe1 = {
+        x: [0, 0], y: [0, 1], mode: 'lines+markers+text',
+        line: { color: '#b34a3b', width: 3 },
+        marker: { size: [2, 7], color: '#b34a3b' },
+        text: ['', 'Se₁=(0,1)'], textposition: 'top right',
+        name: 'Se₁'
+    };
+
+    const traceSe2 = {
+        x: [0, 1], y: [0, 0], mode: 'lines+markers+text',
+        line: { color: '#5f7a4e', width: 3 },
+        marker: { size: [2, 7], color: '#5f7a4e' },
+        text: ['', 'Se₂=(1,0)'], textposition: 'bottom right',
+        name: 'Se₂'
+    };
+
+    const layout = {
+        title: { text: '<b>Отражение S:</b> v(5, 2) → Sv(2, 5), det = -1', font: { size: 13, color: '#2a1d17' } },
+        height: 380,
+        margin: { l: 35, r: 35, t: 45, b: 35 },
+        autosize: true,
+        xaxis: { range: [-1.2, 6.6], zeroline: true, zerolinecolor: '#4a3b32', zerolinewidth: 1.5, gridcolor: '#f0e9df' },
+        yaxis: { range: [-1.2, 6.6], scaleanchor: 'x', scaleratio: 1, zeroline: true, zerolinecolor: '#4a3b32', zerolinewidth: 1.5, gridcolor: '#f0e9df' },
+        template: 'plotly_white',
+        paper_bgcolor: 'rgba(0,0,0,0)',
+        plot_bgcolor: 'rgba(0,0,0,0)',
+        font: { family: 'Inter, sans-serif' },
+        annotations: [
+            {
+                x: 5.6, y: 5.9,
+                text: '<b>y = x</b>',
+                showarrow: false,
+                font: { color: '#b8863b', size: 12 }
+            }
+        ],
+        showlegend: false
+    };
+
+    Plotly.react(container, [traceAxis, traceDisplacement, traceMid, traceV, traceSv, traceSe1, traceSe2], layout, { responsive: true, displayModeBar: false });
+}
+
+function renderCanonProjectPlot() {
+    const container = document.getElementById('plot-canon-project');
+    if (!container) return;
+
+    // Матрица проектора на ось X: [1, 0; 0, 0]
+    // Вектор v = (3, 4) -> Pv = (3, 0)
+    // Невязка e = (0, 4)
+    const v = [3, 4];
+    const Pv = [3, 0];
+
+    // Подсветка Im(P) = ось X
+    const traceIm = {
+        x: [-1.0, 5.4], y: [0, 0], mode: 'lines',
+        line: { color: '#5f7a4e', width: 6 },
+        name: 'Im(P) = Span(e₁)'
+    };
+
+    // Подсветка Ker(P) = ось Y
+    const traceKer = {
+        x: [0, 0], y: [-1.0, 5.2], mode: 'lines',
+        line: { color: '#a89484', width: 3, dash: 'dot' },
+        name: 'Ker(P) = Span(e₂)'
+    };
+
+    // Прямоугольный треугольник Пифагора
+    const tracePythArea = {
+        x: [0, 3, 3, 0], y: [0, 0, 4, 0], mode: 'lines',
+        fill: 'toself', fillcolor: 'rgba(117, 82, 60, 0.09)',
+        line: { color: 'rgba(117, 82, 60, 0.3)', width: 1, dash: 'dot' },
+        hoverinfo: 'none',
+        name: 'Пифагор: 3² + 4² = 5²'
+    };
+
+    // Вектор ошибки e = (0, 4)
+    const traceE = {
+        x: [3, 3], y: [0, 4], mode: 'lines+text',
+        line: { color: '#c5221f', width: 3, dash: 'dash' },
+        text: ['', 'e=(0,4) ⊥ X'], textposition: 'middle right',
+        name: 'Невязка e ⊥ Im(P)'
+    };
+
+    // Квадратик прямого угла в (3, 0)
+    const sq = 0.35;
+    const traceCorner = {
+        x: [3 - sq, 3 - sq, 3], y: [0, sq, sq], mode: 'lines',
+        line: { color: '#4a3b32', width: 1.5 },
+        hoverinfo: 'none', showlegend: false
+    };
+
+    const traceV = {
+        x: [0, v[0]], y: [0, v[1]], mode: 'lines+markers+text',
+        line: { color: '#205493', width: 4.5 },
+        marker: { size: [3, 9], color: '#205493' },
+        text: ['', 'v = (3, 4)'], textposition: 'top center',
+        name: 'Вектор v'
+    };
+
+    const tracePv = {
+        x: [0, Pv[0]], y: [0, Pv[1]], mode: 'lines+markers+text',
+        line: { color: '#75523c', width: 6 },
+        marker: { size: [3, 10], color: '#75523c' },
+        text: ['', 'Pv = (3, 0)'], textposition: 'bottom center',
+        name: 'Проекция Pv'
+    };
+
+    const layout = {
+        title: { text: '<b>Проектор P:</b> v(3, 4) → Pv(3, 0), det = 0, Ker(P)=ось Y', font: { size: 13, color: '#2a1d17' } },
+        height: 380,
+        margin: { l: 35, r: 35, t: 45, b: 35 },
+        autosize: true,
+        xaxis: { range: [-1.2, 5.5], zeroline: true, zerolinecolor: '#4a3b32', zerolinewidth: 1.5, gridcolor: '#f0e9df' },
+        yaxis: { range: [-1.2, 5.2], scaleanchor: 'x', scaleratio: 1, zeroline: true, zerolinecolor: '#4a3b32', zerolinewidth: 1.5, gridcolor: '#f0e9df' },
+        template: 'plotly_white',
+        paper_bgcolor: 'rgba(0,0,0,0)',
+        plot_bgcolor: 'rgba(0,0,0,0)',
+        font: { family: 'Inter, sans-serif' },
+        annotations: [
+            {
+                x: 1.5, y: 2.2,
+                text: '||v||² = 25<br>= 3² + 4²',
+                showarrow: false,
+                font: { color: '#75523c', size: 11 }
+            }
+        ],
+        showlegend: false
+    };
+
+    Plotly.react(container, [traceIm, traceKer, tracePythArea, traceCorner, traceE, traceV, tracePv], layout, { responsive: true, displayModeBar: false });
+}
+
+function renderCanonScalePlot() {
+    const container = document.getElementById('plot-canon-scale');
+    if (!container) return;
+
+    // Матрица D: [3, 0; 0, 0.5]
+    // Окружность x^2 + y^2 = 1 -> эллипс (x/3)^2 + (y/0.5)^2 = 1
+    // Вектор v = (1, 1) -> Dv = (3, 0.5)
+    const nPts = 100;
+    const circX = [], circY = [];
+    const ellX = [], ellY = [];
+    for (let i = 0; i <= nPts; i++) {
+        const th = (2 * Math.PI * i) / nPts;
+        circX.push(Math.cos(th));
+        circY.push(Math.sin(th));
+        ellX.push(3 * Math.cos(th));
+        ellY.push(0.5 * Math.sin(th));
+    }
+
+    const traceCirc = {
+        x: circX, y: circY, mode: 'lines',
+        line: { color: '#a89484', width: 2, dash: 'dot' },
+        name: 'Круг S¹'
+    };
+
+    const traceEllipse = {
+        x: ellX, y: ellY, mode: 'lines',
+        line: { color: '#75523c', width: 3.5 },
+        fill: 'toself',
+        fillcolor: 'rgba(117, 82, 60, 0.08)',
+        name: 'Эллипс D(S¹)'
+    };
+
+    // Полуоси эллипса
+    const traceAxisA = {
+        x: [0, 3], y: [0, 0], mode: 'lines+text',
+        line: { color: '#b34a3b', width: 3.5 },
+        text: ['', 'a = 3 (kx=3)'], textposition: 'bottom right',
+        name: 'Полуось a = 3'
+    };
+
+    const traceAxisB = {
+        x: [0, 0], y: [0, 0.5], mode: 'lines+text',
+        line: { color: '#5f7a4e', width: 3.5 },
+        text: ['', 'b = 0.5 (ky=0.5)'], textposition: 'top left',
+        name: 'Полуось b = 0.5'
+    };
+
+    const traceV = {
+        x: [0, 1], y: [0, 1], mode: 'lines+markers+text',
+        line: { color: '#205493', width: 4 },
+        marker: { size: [3, 8], color: '#205493' },
+        text: ['', 'v = (1, 1)'], textposition: 'top left',
+        name: 'Вектор v'
+    };
+
+    const traceDv = {
+        x: [0, 3], y: [0, 0.5], mode: 'lines+markers+text',
+        line: { color: '#75523c', width: 4.5 },
+        marker: { size: [3, 9], color: '#75523c' },
+        text: ['', 'Dv = (3, 0.5)'], textposition: 'top right',
+        name: 'Образ Dv'
+    };
+
+    const traceConnector = {
+        x: [1, 3], y: [1, 0.5], mode: 'lines',
+        line: { color: '#b8863b', width: 1.5, dash: 'dot' },
+        name: 'v → Dv'
+    };
+
+    const layout = {
+        title: { text: '<b>Масштабирование D:</b> круг S¹ → эллипс (a=3, b=0.5), det = 1.5', font: { size: 13, color: '#2a1d17' } },
+        height: 380,
+        margin: { l: 35, r: 35, t: 45, b: 35 },
+        autosize: true,
+        xaxis: { range: [-3.8, 3.8], zeroline: true, zerolinecolor: '#4a3b32', zerolinewidth: 1.5, gridcolor: '#f0e9df' },
+        yaxis: { range: [-2.2, 2.2], scaleanchor: 'x', scaleratio: 1, zeroline: true, zerolinecolor: '#4a3b32', zerolinewidth: 1.5, gridcolor: '#f0e9df' },
+        template: 'plotly_white',
+        paper_bgcolor: 'rgba(0,0,0,0)',
+        plot_bgcolor: 'rgba(0,0,0,0)',
+        font: { family: 'Inter, sans-serif' },
+        showlegend: false
+    };
+
+    Plotly.react(container, [traceCirc, traceEllipse, traceAxisA, traceAxisB, traceConnector, traceV, traceDv], layout, { responsive: true, displayModeBar: false });
+}
+
+function renderCanonicalOperators2D() {
+    renderCanonRotatePlot();
+    renderCanonReflectPlot();
+    renderCanonProjectPlot();
+    renderCanonScalePlot();
+}
+
+// -------------------------------------------------------------------------
+// [2.4] Интерактивный 2D-трансформер с вводом своего вектора и своей матрицы
+// -------------------------------------------------------------------------
+
+function updateLinearOperatorStand() {
+    const selectOp = document.getElementById('select-operator-type');
+    const sliderOpAngle = document.getElementById('slider-op-angle');
+    const opType = selectOp?.value || 'rotate';
+    const angle = parseFloat(sliderOpAngle?.value || 45);
+
+    const valSpan = document.getElementById('val-op-angle');
+    if (valSpan) valSpan.textContent = angle;
+
+    const groupAngle = document.getElementById('group-slider-angle');
+    if (groupAngle) {
+        groupAngle.style.display = (opType === 'custom') ? 'none' : 'block';
+    }
+
+    // Вектор пользователя
+    const vx = parseFloat(document.getElementById('op-vx')?.value || 2.0);
+    const vy = parseFloat(document.getElementById('op-vy')?.value || 1.0);
+    const userVec = [isNaN(vx) ? 2.0 : vx, isNaN(vy) ? 1.0 : vy];
+
+    // Пользовательская матрица
+    let customMatrix = null;
+    if (opType === 'custom') {
+        const m11 = parseFloat(document.getElementById('op-m11')?.value);
+        const m12 = parseFloat(document.getElementById('op-m12')?.value);
+        const m21 = parseFloat(document.getElementById('op-m21')?.value);
+        const m22 = parseFloat(document.getElementById('op-m22')?.value);
+        customMatrix = [
+            [isNaN(m11) ? 1 : m11, isNaN(m12) ? 0 : m12],
+            [isNaN(m21) ? 0 : m21, isNaN(m22) ? 1 : m22]
+        ];
+    }
+
+    renderLinearOperator2D(opType, angle, customMatrix, userVec);
+}
+
+function initLinearOperatorStandControls() {
+    const selectOp = document.getElementById('select-operator-type');
+    const sliderOpAngle = document.getElementById('slider-op-angle');
+
+    const throttledUpdate = rafThrottle(() => {
+        updateLinearOperatorStand();
+    });
+
+    selectOp?.addEventListener('change', () => {
+        throttledUpdate();
+    });
+
+    sliderOpAngle?.addEventListener('input', () => {
+        throttledUpdate();
+    });
+
+    // Обработка ручного изменения матрицы 2x2
+    const matInputs = ['op-m11', 'op-m12', 'op-m21', 'op-m22'];
+    matInputs.forEach(id => {
+        const inp = document.getElementById(id);
+        inp?.addEventListener('input', () => {
+            if (selectOp && selectOp.value !== 'custom') {
+                selectOp.value = 'custom';
+            }
+            throttledUpdate();
+        });
+    });
+
+    // Обработка ручного изменения компонент вектора
+    const vecInputs = ['op-vx', 'op-vy'];
+    vecInputs.forEach(id => {
+        const inp = document.getElementById(id);
+        inp?.addEventListener('input', throttledUpdate);
+    });
+
+    // Пресеты матрицы
+    document.getElementById('btn-mat-ident')?.addEventListener('click', () => {
+        setOperatorMatrixInputs([[1, 0], [0, 1]]);
+        if (selectOp) selectOp.value = 'custom';
+        throttledUpdate();
+    });
+    document.getElementById('btn-mat-rot90')?.addEventListener('click', () => {
+        setOperatorMatrixInputs([[0, -1], [1, 0]]);
+        if (selectOp) selectOp.value = 'custom';
+        throttledUpdate();
+    });
+    document.getElementById('btn-mat-diag')?.addEventListener('click', () => {
+        setOperatorMatrixInputs([[2, 0], [0, 0.5]]);
+        if (selectOp) selectOp.value = 'custom';
+        throttledUpdate();
+    });
+    document.getElementById('btn-mat-rank1')?.addEventListener('click', () => {
+        setOperatorMatrixInputs([[1, 1], [1, 1]]);
+        if (selectOp) selectOp.value = 'custom';
+        throttledUpdate();
+    });
+
+    // Пресеты вектора
+    document.getElementById('btn-vec-preset-1')?.addEventListener('click', () => {
+        setOperatorVectorInputs(2, 1);
+        throttledUpdate();
+    });
+    document.getElementById('btn-vec-preset-2')?.addEventListener('click', () => {
+        setOperatorVectorInputs(3, 4);
+        throttledUpdate();
+    });
+    document.getElementById('btn-vec-preset-3')?.addEventListener('click', () => {
+        setOperatorVectorInputs(1, 0);
+        throttledUpdate();
+    });
+    document.getElementById('btn-vec-preset-4')?.addEventListener('click', () => {
+        setOperatorVectorInputs(-1.5, 2);
+        throttledUpdate();
+    });
+}
+
+function setOperatorMatrixInputs(M) {
+    const ids = [['op-m11', 'op-m12'], ['op-m21', 'op-m22']];
+    for (let r = 0; r < 2; r++) {
+        for (let c = 0; c < 2; c++) {
+            const el = document.getElementById(ids[r][c]);
+            if (el) el.value = Number.isInteger(M[r][c]) ? M[r][c] : M[r][c].toFixed(3);
+        }
+    }
+}
+
+function setOperatorVectorInputs(x, y) {
+    const elX = document.getElementById('op-vx');
+    const elY = document.getElementById('op-vy');
+    if (elX) elX.value = x;
+    if (elY) elY.value = y;
+}
+
+function renderLinearOperator2D(opType = 'rotate', param = 45, customMatrix = null, customVector = [2, 1]) {
     const container = document.getElementById('plot-operator-2d');
     if (!container) return;
 
@@ -1868,34 +2366,56 @@ function renderLinearOperator2D(opType = 'rotate', param = 45) {
         const c = Math.cos(rad);
         const s = Math.sin(rad);
         M = [[c, -s], [s, c]];
-        desc = `Поворот на угол θ = ${param}°: сохраняет длины векторов и углы между ними. Изометрия, det = ${det2x2(M).toFixed(3)}.`;
+        desc = `Поворот на угол θ = ${param}°: сохраняет длины всех векторов и углы между ними (ортогональный оператор / изометрия).`;
         formulaTex = `R_\\theta = \\begin{pmatrix} \\cos(${param}^\\circ) & -\\sin(${param}^\\circ) \\\\ \\sin(${param}^\\circ) & \\cos(${param}^\\circ) \\end{pmatrix}`;
+        setOperatorMatrixInputs(M);
     } else if (opType === 'scale') {
         const kx = 1.0 + (param - 45) / 45;
         const ky = 0.5 + (param / 90);
         M = [[kx, 0], [0, ky]];
-        desc = `Анизотропное масштабирование: k_x = ${kx.toFixed(2)}, k_y = ${ky.toFixed(2)}. Деформирует окружность в эллипс со сжатием/растяжением по осям. det = ${(kx*ky).toFixed(2)}.`;
+        desc = `Анизотропное масштабирование: k_x = ${kx.toFixed(2)}, k_y = ${ky.toFixed(2)}. Превращает единичную окружность в эллипс.`;
         formulaTex = `S = \\begin{pmatrix} ${kx.toFixed(2)} & 0 \\\\ 0 & ${ky.toFixed(2)} \\end{pmatrix}`;
+        setOperatorMatrixInputs(M);
     } else if (opType === 'shear') {
         const s = (param - 180) / 60;
         M = [[1, s], [0, 1]];
-        desc = `Сдвиг (Shear) вдоль оси X: параметр s = ${s.toFixed(2)}. Скос вертикалей, при этом площади фигур в точности сохраняются (det = 1.000).`;
+        desc = `Сдвиг (Shear) вдоль оси X: параметр скоса s = ${s.toFixed(2)}. Площади фигур в точности сохраняются (det = 1).`;
         formulaTex = `H_s = \\begin{pmatrix} 1 & ${s.toFixed(2)} \\\\ 0 & 1 \\end{pmatrix}`;
+        setOperatorMatrixInputs(M);
     } else if (opType === 'reflect') {
         const rad = (param * Math.PI) / 180;
         const c = Math.cos(2 * rad);
         const s = Math.sin(2 * rad);
         M = [[c, s], [s, -c]];
-        desc = `Отражение Хаусхолдера относительно оси под углом θ = ${param}°: det = -1.000 (меняет ориентацию базиса на противоположную).`;
+        desc = `Отражение Хаусхолдера относительно оси под углом θ = ${param}°: меняет ориентацию базиса (det = -1).`;
         formulaTex = `M_\\theta = \\begin{pmatrix} \\cos(2\\theta) & \\sin(2\\theta) \\\\ \\sin(2\\theta) & -\\cos(2\\theta) \\end{pmatrix}`;
+        setOperatorMatrixInputs(M);
     } else if (opType === 'project') {
         const rad = (param * Math.PI) / 180;
         const c = Math.cos(rad);
         const s = Math.sin(rad);
         M = [[c * c, c * s], [c * s, s * s]];
-        desc = `Ортогональный проектор на прямую под углом θ = ${param}°: det = 0.000, ранг = 1. Сплющивает всю 2D-плоскость в одномерную прямую.`;
+        desc = `Ортогональный проектор на прямую под углом θ = ${param}°: необратим (det = 0, rank = 1). Схлопывает плоскость в одномерную прямую.`;
         formulaTex = `P_\\theta = \\begin{pmatrix} \\cos^2\\theta & \\cos\\theta\\sin\\theta \\\\ \\cos\\theta\\sin\\theta & \\sin^2\\theta \\end{pmatrix}`;
+        setOperatorMatrixInputs(M);
+    } else if (opType === 'custom') {
+        M = customMatrix || [[1, 0], [0, 1]];
+        desc = `Пользовательская матрица 2×2: задаёт произвольное линейное отображение координатной плоскости ℝ².`;
+        formulaTex = `M_{\\text{user}} = \\begin{pmatrix} ${M[0][0].toFixed(3)} & ${M[0][1].toFixed(3)} \\\\ ${M[1][0].toFixed(3)} & ${M[1][1].toFixed(3)} \\end{pmatrix}`;
     }
+
+    // Вектор пользователя и его образ
+    const vx = customVector[0];
+    const vy = customVector[1];
+    const ux = M[0][0] * vx + M[0][1] * vy;
+    const uy = M[1][0] * vx + M[1][1] * vy;
+
+    const normV = Math.sqrt(vx * vx + vy * vy);
+    const normU = Math.sqrt(ux * ux + uy * uy);
+    const lenScale = normV > 1e-12 ? (normU / normV) : 0;
+    const dotVU = vx * ux + vy * uy;
+    const cosVU = (normV > 1e-12 && normU > 1e-12) ? Math.max(-1, Math.min(1, dotVU / (normV * normU))) : 1;
+    const angleVU = (Math.acos(cosVU) * 180) / Math.PI;
 
     // Исходная единичная окружность S^1
     const nPts = 120;
@@ -1928,49 +2448,93 @@ function renderLinearOperator2D(opType = 'rotate', param = 45) {
     const traceOrigCircle = {
         x: circX, y: circY, mode: 'lines',
         line: { color: '#a89484', width: 2, dash: 'dot' },
-        name: 'Исходная окружность S¹'
+        name: 'Круг S¹'
     };
 
     const traceTransCircle = {
         x: transX, y: transY, mode: 'lines',
-        line: { color: '#75523c', width: 3.5 },
+        line: { color: '#75523c', width: 3 },
         fill: 'toself',
         fillcolor: 'rgba(117, 82, 60, 0.08)',
-        name: 'Образ окружности M(S¹)'
+        name: 'Образ M(S¹)'
     };
 
     const traceTransSquare = {
         x: trSqX, y: trSqY, mode: 'lines',
-        line: { color: '#b8863b', width: 2, dash: 'dash' },
-        name: 'Образ квадрата [-1,1]²'
+        line: { color: '#b8863b', width: 1.8, dash: 'dash' },
+        name: 'Образ квадрата'
     };
 
     const traceE1 = {
         x: [0, e1Trans[0]], y: [0, e1Trans[1]],
         mode: 'lines+markers+text',
-        line: { color: '#b34a3b', width: 4 },
+        line: { color: '#b34a3b', width: 3.5 },
         marker: { size: [2, 8], color: '#b34a3b' },
-        text: ['', `M e₁ (${e1Trans[0].toFixed(2)}, ${e1Trans[1].toFixed(2)})`],
+        text: ['', `Me₁ (${e1Trans[0].toFixed(2)}, ${e1Trans[1].toFixed(2)})`],
         textposition: 'top right',
-        name: 'Столбец 1: M e₁'
+        name: 'Me₁'
     };
 
     const traceE2 = {
         x: [0, e2Trans[0]], y: [0, e2Trans[1]],
         mode: 'lines+markers+text',
-        line: { color: '#5f7a4e', width: 4 },
+        line: { color: '#5f7a4e', width: 3.5 },
         marker: { size: [2, 8], color: '#5f7a4e' },
-        text: ['', `M e₂ (${e2Trans[0].toFixed(2)}, ${e2Trans[1].toFixed(2)})`],
+        text: ['', `Me₂ (${e2Trans[0].toFixed(2)}, ${e2Trans[1].toFixed(2)})`],
         textposition: 'top left',
-        name: 'Столбец 2: M e₂'
+        name: 'Me₂'
     };
 
+    // Пользовательский вектор v
+    const traceUserV = {
+        x: [0, vx], y: [0, vy],
+        mode: 'lines+markers+text',
+        line: { color: '#1d70b8', width: 4.5 },
+        marker: { size: [3, 9], color: '#1d70b8' },
+        text: ['', `v (${vx.toFixed(2)}, ${vy.toFixed(2)})`],
+        textposition: 'bottom right',
+        name: 'Вектор v'
+    };
+
+    // Образ Mv
+    const traceTransV = {
+        x: [0, ux], y: [0, uy],
+        mode: 'lines+markers+text',
+        line: { color: '#c5221f', width: 4.5 },
+        marker: { size: [3, 9], color: '#c5221f' },
+        text: ['', `Mv (${ux.toFixed(2)}, ${uy.toFixed(2)})`],
+        textposition: 'top right',
+        name: 'Образ Mv'
+    };
+
+    // Соединительная траектория от v к Mv
+    const traceConnectV = {
+        x: [vx, ux], y: [vy, uy],
+        mode: 'lines',
+        line: { color: '#b8863b', width: 2, dash: 'dot' },
+        name: 'Смещение v → Mv'
+    };
+
+    // Адаптивные границы осей с защитой от вылета
+    const maxCoord = Math.max(
+        2.6,
+        Math.abs(vx), Math.abs(vy),
+        Math.abs(ux), Math.abs(uy),
+        Math.abs(M[0][0]), Math.abs(M[1][0]),
+        Math.abs(M[0][1]), Math.abs(M[1][1]),
+        Math.abs(M[0][0] + M[0][1]), Math.abs(M[1][0] + M[1][1])
+    );
+    const lim = Math.max(3.2, Math.ceil(maxCoord * 1.25 * 2) / 2);
+
+    const detM = det2x2(M);
+    const trM = M[0][0] + M[1][1];
+
     const layout = {
-        title: `Преобразование пространства оператором: det(M) = ${det2x2(M).toFixed(3)}`,
-        height: 478,
+        title: `Преобразование пространства и вектора: det(M) = ${detM.toFixed(3)}`,
+        height: 480,
         autosize: true,
-        xaxis: { title: 'X₁', range: [-3.2, 3.2], zeroline: true, zerolinecolor: '#4a3b32' },
-        yaxis: { title: 'X₂', range: [-3.2, 3.2], scaleanchor: 'x', scaleratio: 1, zeroline: true, zerolinecolor: '#4a3b32' },
+        xaxis: { title: 'X₁', range: [-lim, lim], zeroline: true, zerolinecolor: '#4a3b32', zerolinewidth: 1.5, gridcolor: '#f0e9df' },
+        yaxis: { title: 'X₂', range: [-lim, lim], scaleanchor: 'x', scaleratio: 1, zeroline: true, zerolinecolor: '#4a3b32', zerolinewidth: 1.5, gridcolor: '#f0e9df' },
         template: 'plotly_white',
         paper_bgcolor: 'rgba(0,0,0,0)',
         plot_bgcolor: 'rgba(0,0,0,0)',
@@ -1978,37 +2542,74 @@ function renderLinearOperator2D(opType = 'rotate', param = 45) {
         margin: { l: 40, r: 40, t: 50, b: 40 }
     };
 
-    Plotly.react(container, [traceOrigCircle, traceTransSquare, traceTransCircle, traceE1, traceE2], layout, { responsive: true });
+    Plotly.react(container, [
+        traceOrigCircle,
+        traceTransSquare,
+        traceTransCircle,
+        traceE1,
+        traceE2,
+        traceConnectV,
+        traceUserV,
+        traceTransV
+    ], layout, { responsive: true });
 
+    // Информационная карточка
     const cardEl = document.getElementById('operator-matrix-card');
     if (cardEl) {
-        const detM = det2x2(M);
-        const trM = M[0][0] + M[1][1];
-                cardEl.innerHTML = `
-            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:1rem; align-items:start;">
+        const isDegenerate = Math.abs(detM) < 1e-5;
+        let inverseTex = '';
+        if (!isDegenerate) {
+            const invM = [
+                [M[1][1] / detM, -M[0][1] / detM],
+                [-M[1][0] / detM, M[0][0] / detM]
+            ];
+            inverseTex = `$$M^{-1} = \\begin{pmatrix} ${invM[0][0].toFixed(3)} & ${invM[0][1].toFixed(3)} \\\\[3pt] ${invM[1][0].toFixed(3)} & ${invM[1][1].toFixed(3)} \\end{pmatrix}$$`;
+        } else {
+            inverseTex = `<i>Обратная не существует (\\det = 0, оператор необратим)</i>`;
+        }
+
+        cardEl.innerHTML = `
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:1.2rem; align-items:start;">
                 <div>
                     <b>Текущая матрица оператора M:</b><br>
-                    $$\\begin{aligned} M &= ${formulaTex} \\\\[6pt] &= \\begin{pmatrix} ${M[0][0].toFixed(3)} & ${M[0][1].toFixed(3)} \\\\ ${M[1][0].toFixed(3)} & ${M[1][1].toFixed(3)} \\end{pmatrix} \\end{aligned}$$
+                    $$\\begin{aligned} M &= ${formulaTex} \\\\[4pt] &= \\begin{pmatrix} ${M[0][0].toFixed(3)} & ${M[0][1].toFixed(3)} \\\\[3pt] ${M[1][0].toFixed(3)} & ${M[1][1].toFixed(3)} \\end{pmatrix} \\end{aligned}$$
+                    <div style="margin-top:0.6rem; font-size:0.86rem;">
+                        <b>Обратная матрица:</b><br>
+                        ${inverseTex}
+                    </div>
                 </div>
+
                 <div>
-                    <b>Инварианты оператора:</b><br>
-                    • Определитель $\\det(M) = \\mathbf{${detM.toFixed(3)}}$ (коэффициент масштабирования ориентированной площади)<br>
-                    • След $\\operatorname{tr}(M) = \\mathbf{${trM.toFixed(3)}}$<br>
-                    • Ранг: <b>${Math.abs(detM) > 1e-4 ? 2 : 1}</b>
+                    <b>Преобразование вектора $v \\to Mv$:</b><br>
+                    $$v = \\begin{pmatrix} ${vx.toFixed(2)} \\\\[2pt] ${vy.toFixed(2)} \\end{pmatrix} \\implies Mv = \\begin{pmatrix} ${ux.toFixed(2)} \\\\[2pt] ${uy.toFixed(2)} \\end{pmatrix}$$
+                    <div style="font-size:0.88rem; line-height:1.55; margin-top:0.4rem;">
+                        • Длина $\\|v\\| = \\mathbf{${normV.toFixed(3)}}$, длина $\\|Mv\\| = \\mathbf{${normU.toFixed(3)}}$<br>
+                        • Масштаб изменения длины: $\\frac{\\|Mv\\|}{\\|v\\|} = \\mathbf{${lenScale.toFixed(3)}}$<br>
+                        • Угол между $v$ и $Mv$: $\\Delta\\theta = \\mathbf{${angleVU.toFixed(1)}^\\circ}$<br>
+                        • Скалярное произведение: $\\langle v, Mv \\rangle = \\mathbf{${dotVU.toFixed(3)}}$
+                    </div>
                 </div>
+
                 <div>
-                    <b>Геометрический вердикт:</b><br>
-                    ${desc}
+                    <b>Инварианты и геометрический смысл:</b><br>
+                    <div style="font-size:0.88rem; line-height:1.55; margin-top:0.3rem;">
+                        • Определитель $\\det(M) = \\mathbf{${detM.toFixed(3)}}$ (${Math.abs(detM) < 1e-5 ? 'ранг 1, схлопывание площади в 0' : (detM > 0 ? 'сохраняет ориентацию плоскости' : 'инвертирует ориентацию')})<br>
+                        • След $\\operatorname{tr}(M) = \\mathbf{${trM.toFixed(3)}}$<br>
+                        • Ранг оператора: <b>${Math.abs(detM) > 1e-4 ? 2 : 1}</b><br>
+                        • Дефект $\\dim\\operatorname{Ker}(M) = \\mathbf{${Math.abs(detM) > 1e-4 ? 0 : 1}}$
+                    </div>
+                    <div style="margin-top:0.6rem; font-size:0.86rem; color:var(--text-secondary); background:rgba(117,82,60,0.06); padding:0.6rem 0.8rem; border-radius:6px;">
+                        <b>Вердикт:</b> ${desc}
+                    </div>
                 </div>
             </div>
-   
         `;
+
         if (window.renderMathInElement) {
             renderMathInElement(cardEl, { delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}] });
         }
     }
 }
-
 // -------------------------------------------------------------------------
 // [2.6] 3D-Стенд: Пошаговый процесс Грама-Шмидта (Шаги 0–4)
 // -------------------------------------------------------------------------

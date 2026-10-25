@@ -30,6 +30,10 @@
 
     <script src="libs/plotly-2.30.0.min.js"></script>
 
+        <!-- Библиотеки для парсинга Word .docx (JSZip + Mammoth) -->
+    <script src="libs/jszip.min.js"></script>
+    <script src="libs/mammoth.browser.min.js"></script>
+
     <!-- Локальные стили -->
 
     <link rel="stylesheet" href="css/style.css">
@@ -44,11 +48,18 @@
 
         <div class="brand">
 
-            <h2>📐 PRIKLAD</h2>
+            <h2>PRIKLAD</h2>
 
             <p>Прикладные методы алгебры и анализа</p>
 
             <p id="course-section-indicator" style="color:var(--primary); font-weight:600; font-size:0.78rem;">Раздел 1: Векторные пространства и нормы</p>
+
+            <!-- Кнопка импорта лекции из Word -->
+            <div style="margin-top:0.8rem;">
+                <button id="btn-open-doc-importer" class="btn-import-doc" title="Создать новый модуль из файла Word (.docx)">
+                    Импорт лекции (.docx)
+                </button>
+            </div>
 
         </div>
 
@@ -235,7 +246,7 @@
 
             <div class="callout callout-theory">
 
-                <div class="callout-title">🎯 Назначение курса и методический принцип</div>
+                <div class="callout-title">Назначение курса и методический принцип</div>
 
                 Курс собирает три классические математические дисциплины (линейная алгебра, математический анализ, теория вероятностей) в один инструментальный набор, которым пользуются при построении и отладке моделей машинного обучения.
 
@@ -2133,7 +2144,7 @@
 
                     </div>
 
-                    <button class="btn" id="btn-run-lab">🚀 Запустить вычисления k-NN для D = [2..256]</button>
+                    <button class="btn" id="btn-run-lab">Запустить вычисления k-NN для D = [2..256]</button>
 
                 </div>
 
@@ -2477,29 +2488,82 @@
             </div>
 
             <div class="callout callout-example">
-                <div class="callout-title">4 канонических оператора на плоскости $\mathbb{R}^2$ (подробный разбор из лекции)</div>
-                <ol style="margin-left:1.4rem; display:flex; flex-direction:column; gap:0.6rem;">
-                    <li>
-                        <b>Поворот на $90^\circ$ против часовой стрелки:</b><br>
-                        Базисные векторы: $e_1 = (1, 0)^T \to (0, 1)^T$, $e_2 = (0, 1)^T \to (-1, 0)^T$.<br>
-                        Матрица: $R_{90^\circ} = \begin{pmatrix} 0 & -1 \\ 1 & 0 \end{pmatrix}$. Для вектора $v = (3, 4)^T$: $R v = (-4, 3)^T$. Длина $\|v\| = 5$ сохранена, угол увеличился на $90^\circ$. Свойства: $\det R = 1$, $\operatorname{Ker} R = \{0\}$, $R^4 = I$, $R^{-1} = R^T$. В общем виде поворот на угол $\theta$: $R_\theta = \begin{pmatrix} \cos\theta & -\sin\theta \\ \sin\theta & \cos\theta \end{pmatrix}$.
-                    </li>
-                    <li>
-                        <b>Отражение относительно биссектрисы $y = x$:</b><br>
-                        Базисные векторы: $e_1 \to (0, 1)^T$, $e_2 \to (1, 0)^T$.<br>
-                        Матрица: $S = \begin{pmatrix} 0 & 1 \\ 1 & 0 \end{pmatrix}$. Для $v = (5, 2)^T$: $S v = (2, 5)^T$. Середина $(3.5, 3.5)$ лежит на оси $y=x$, вектор смещения $(-3, 3) \perp (1, 1)$. Свойства: $\det S = -1$ (меняет ориентацию), $S^2 = I$, $S = S^{-1} = S^T$.
-                    </li>
-                    <li>
-                        <b>Ортогональная проекция на ось $x$:</b><br>
-                        Базисные векторы: $e_1 \to (1, 0)^T$, $e_2 \to (0, 0)^T$.<br>
-                        Матрица: $P = \begin{pmatrix} 1 & 0 \\ 0 & 0 \end{pmatrix}$. Для $v = (3, 4)^T$: $P v = (3, 0)^T$. Разность $(0, 4)^T$ перпендикулярна оси $x$. Свойства: $\det P = 0$ (необратим), $\operatorname{Ker} P = \operatorname{Span}(e_2)$, $\operatorname{Im} P = \operatorname{Span}(e_1)$, $P^2 = P$ (идемпотентность), $P = P^T$ (симметричность).
-                    </li>
-                    <li>
-                        <b>Неравномерное масштабирование (растяжение/сжатие):</b><br>
-                        Растяжение по $x$ в 3 раза, сжатие по $y$ в 2 раза: $D = \begin{pmatrix} 3 & 0 \\ 0 & 1/2 \end{pmatrix}$.<br>
-                        Превращает единичный круг $x^2 + y^2 = 1$ в эллипс с полуосями 3 и $0.5$. $\det D = 1.5$. Связь с нормализацией признаков в ML (feature scaling) и диагональной матрицей сингулярных чисел $\Sigma$ в SVD.
-                    </li>
-                </ol>
+                <div class="callout-title">4 канонических оператора на плоскости $\mathbb{R}^2$ (подробный разбор и визуализация из лекции)</div>
+                
+                <p style="margin: 0.5rem 0 1.2rem 0; font-size:0.92rem; color:var(--text-secondary);">
+                    Каждый канонический оператор проиллюстрирован действием на базисные векторы $(e_1, e_2)$ и конкретный контрольный вектор из лекции:
+                </p>
+
+                <!-- 1 2 3 4 в столбик по порядку -->
+                <div style="display:flex; flex-direction:column; gap:1.6rem;" id="canon-operators-list">
+                    <!-- Пример 1: Поворот на 90° -->
+                    <div class="card" id="canon-card-1" style="background:#fff; border:1px solid var(--border-color); border-radius:8px; padding:1.4rem; margin-bottom:0;">
+                        <div class="card-title-row" style="margin-bottom:0.6rem;">
+                            <h4 style="margin:0; font-size:1.06rem; color:var(--primary);">1. Поворот на $90^\circ$ против часовой стрелки</h4>
+                            <span class="badge" style="background:#efe5db; color:var(--primary); font-size:0.75rem; padding:0.2rem 0.5rem; border-radius:4px;">Изометрия (det = +1)</span>
+                        </div>
+                        <p style="font-size:0.9rem; line-height:1.55; margin-bottom:0.7rem;">
+                            <b>Базисные векторы:</b> $e_1 = (1, 0)^T \to (0, 1)^T$, $e_2 = (0, 1)^T \to (-1, 0)^T$.<br>
+                            <b>Матрица:</b> $R_{90^\circ} = \begin{pmatrix} 0 & -1 \\ 1 & 0 \end{pmatrix}$. Для вектора $v = (3, 4)^T$: $R v = (-4, 3)^T$.<br>
+                            <b>Свойства:</b> Длина $\|v\| = 5$ строго сохранена ($\|Rv\| = 5$), угол увеличился на $+90^\circ$. $\det R = 1$, $\operatorname{Ker} R = \{0\}$, $R^4 = I$, $R^{-1} = R^T$. В общем виде: $R_\theta = \begin{pmatrix} \cos\theta & -\sin\theta \\ \sin\theta & \cos\theta \end{pmatrix}$.
+                        </p>
+                        <div id="plot-canon-rotate" class="plot-container" style="height:380px; max-height:380px;"></div>
+                        <div style="font-size:0.82rem; color:var(--text-muted); margin-top:0.4rem; text-align:center;">
+                            Траектория дуги: поворот $v(3, 4) \xrightarrow{+90^\circ} Rv(-4, 3)$, радиус окружности $r = 5$.
+                        </div>
+                    </div>
+
+                    <!-- Пример 2: Отражение относительно y = x -->
+                    <div class="card" id="canon-card-2" style="background:#fff; border:1px solid var(--border-color); border-radius:8px; padding:1.4rem; margin-bottom:0;">
+                        <div class="card-title-row" style="margin-bottom:0.6rem;">
+                            <h4 style="margin:0; font-size:1.06rem; color:var(--primary);">2. Отражение относительно биссектрисы $y = x$</h4>
+                            <span class="badge" style="background:#efe5db; color:var(--primary); font-size:0.75rem; padding:0.2rem 0.5rem; border-radius:4px;">Инволюция S²=I (det = -1)</span>
+                        </div>
+                        <p style="font-size:0.9rem; line-height:1.55; margin-bottom:0.7rem;">
+                            <b>Базисные векторы:</b> $e_1 \to (0, 1)^T$, $e_2 \to (1, 0)^T$ (координатные оси меняются местами).<br>
+                            <b>Матрица:</b> $S = \begin{pmatrix} 0 & 1 \\ 1 & 0 \end{pmatrix}$. Для $v = (5, 2)^T$: $S v = (2, 5)^T$.<br>
+                            <b>Свойства:</b> Середина $(3.5, 3.5)$ лежит на оси $y=x$, вектор смещения $(-3, 3) \perp (1, 1)$. $\det S = -1$ (инвертирует ориентацию), $S^2 = I$, $S = S^{-1} = S^T$.
+                        </p>
+                        <div id="plot-canon-reflect" class="plot-container" style="height:380px; max-height:380px;"></div>
+                        <div style="font-size:0.82rem; color:var(--text-muted); margin-top:0.4rem; text-align:center;">
+                            Отрезок $v \leftrightarrow Sv$ ортогонален оси зеркала $y=x$, точка середины $M(3.5, 3.5) \in \{y=x\}$.
+                        </div>
+                    </div>
+
+                    <!-- Пример 3: Ортогональная проекция на ось x -->
+                    <div class="card" id="canon-card-3" style="background:#fff; border:1px solid var(--border-color); border-radius:8px; padding:1.4rem; margin-bottom:0;">
+                        <div class="card-title-row" style="margin-bottom:0.6rem;">
+                            <h4 style="margin:0; font-size:1.06rem; color:var(--primary);">3. Ортогональная проекция на ось $x$</h4>
+                            <span class="badge" style="background:#efe5db; color:var(--primary); font-size:0.75rem; padding:0.2rem 0.5rem; border-radius:4px;">Идемпотент P²=P (det = 0)</span>
+                        </div>
+                        <p style="font-size:0.9rem; line-height:1.55; margin-bottom:0.7rem;">
+                            <b>Базисные векторы:</b> $e_1 \to (1, 0)^T$, $e_2 \to (0, 0)^T$. $\operatorname{Ker} P = \operatorname{Span}(e_2)$, $\operatorname{Im} P = \operatorname{Span}(e_1)$.<br>
+                            <b>Матрица:</b> $P = \begin{pmatrix} 1 & 0 \\ 0 & 0 \end{pmatrix}$. Для вектора $v = (3, 4)^T$: $P v = (3, 0)^T$.<br>
+                            <b>Свойства и Пифагор:</b> Разность $e = (0, 4)^T \perp$ оси $x$. $\|v\|^2 = \|Pv\|^2 + \|e\|^2 \implies 25 = 9 + 16$. $\det P = 0$ (необратим, ранг 1), $P^2 = P$, $P = P^T$.
+                        </p>
+                        <div id="plot-canon-project" class="plot-container" style="height:380px; max-height:380px;"></div>
+                        <div style="font-size:0.82rem; color:var(--text-muted); margin-top:0.4rem; text-align:center;">
+                            Ортогональный остаток $e = (0, 4) \perp \operatorname{Im}(P)$, ядро оператора — ось $Y$ ($\operatorname{Ker} P \to 0$).
+                        </div>
+                    </div>
+
+                    <!-- Пример 4: Неравномерное масштабирование -->
+                    <div class="card" id="canon-card-4" style="background:#fff; border:1px solid var(--border-color); border-radius:8px; padding:1.4rem; margin-bottom:0;">
+                        <div class="card-title-row" style="margin-bottom:0.6rem;">
+                            <h4 style="margin:0; font-size:1.06rem; color:var(--primary);">4. Неравномерное масштабирование (растяжение / сжатие)</h4>
+                            <span class="badge" style="background:#efe5db; color:var(--primary); font-size:0.75rem; padding:0.2rem 0.5rem; border-radius:4px;">Диагональный (det = 1.5)</span>
+                        </div>
+                        <p style="font-size:0.9rem; line-height:1.55; margin-bottom:0.7rem;">
+                            <b>Матрица:</b> Растяжение по $x$ в 3 раза, сжатие по $y$ в 2 раза: $D = \begin{pmatrix} 3 & 0 \\ 0 & 1/2 \end{pmatrix}$.<br>
+                            <b>Деформация:</b> Превращает единичный круг $x^2 + y^2 = 1$ в эллипс $\frac{x^2}{3^2} + \frac{y^2}{0.5^2} = 1$ с полуосями 3 и $0.5$. Для $v = (1, 1)^T$: $D v = (3, 0.5)^T$.<br>
+                            <b>Свойства:</b> $\det D = 1.5$ (рост площади). Связь с нормализацией признаков в ML и матрицей сингулярных чисел $\Sigma$ в SVD.
+                        </p>
+                        <div id="plot-canon-scale" class="plot-container" style="height:380px; max-height:380px;"></div>
+                        <div style="font-size:0.82rem; color:var(--text-muted); margin-top:0.4rem; text-align:center;">
+                            Круг $S^1$ переходит в эллипс с осями $a = 3, b = 0.5$, ориентированная площадь масштабируется в 1.5 раза.
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div class="callout callout-theory">
@@ -2512,28 +2576,68 @@
             <!-- ИНТЕРАКТИВНЫЙ 2D-СТЕНД ГЕОМЕТРИЧЕСКИХ ОПЕРАТОРОВ -->
             <div class="interactive-card" style="margin-top:1.5rem;">
                 <div class="card-title-row">
-                    <h3>Интерактивный 2D-трансформер: Деформация сетки и окружности</h3>
+                    <h3>Интерактивный 2D-трансформер: Деформация сетки, окружности и пользовательского вектора</h3>
                 </div>
                 <p style="font-size:0.92rem; color:var(--text-muted); margin-bottom:1rem;">
-                    Выберите тип оператора и регулируйте угол или параметр. Наблюдайте преображение единичной окружности $S^1$, координатной сетки и базисных векторов:
+                    Исследуйте действие оператора на базис, единичную окружность $S^1$, координатную сетку и произвольный вектор $v$. Выберите канонический пресет или введите собственную матрицу $M$ и вектор $v$:
                 </p>
-                <div class="controls-grid">
-                    <div class="control-group">
-                        <label>Тип оператора:</label>
-                        <select id="select-operator-type">
+                <div class="controls-grid" style="align-items:flex-start; gap:1.4rem;">
+                    <!-- Выбор пресета -->
+                    <div class="control-group" style="min-width:250px;">
+                        <label style="font-weight:600; margin-bottom:0.3rem;">Канонический пресет:</label>
+                        <select id="select-operator-type" style="width:100%;">
                             <option value="rotate">Поворот R(θ)</option>
                             <option value="scale">Анизотропное масштабирование S(kx, ky)</option>
                             <option value="shear">Сдвиг (Shear)</option>
                             <option value="reflect">Отражение Хаусхолдера</option>
                             <option value="project">Ортогональная проекция на прямую</option>
+                            <option value="custom">Пользовательская матрица 2×2</option>
                         </select>
+                        <div class="control-group" id="group-slider-angle" style="margin-top:0.8rem;">
+                            <label>Параметр угла / коэффициента: <span id="val-op-angle" style="font-weight:700; color:var(--primary);">45</span></label>
+                            <input type="range" id="slider-op-angle" min="0" max="360" value="45" step="5" style="width:100%;">
+                        </div>
                     </div>
-                    <div class="control-group" id="group-slider-angle">
-                        <label>Параметр угла / коэффициента: <span id="val-op-angle">45</span></label>
-                        <input type="range" id="slider-op-angle" min="0" max="360" value="45" step="5">
+
+                    <!-- Ввод матрицы 2x2 -->
+                    <div class="control-group">
+                        <label style="font-weight:600; margin-bottom:0.3rem;">Матрица преобразования $M = \begin{pmatrix} m_{11} & m_{12} \\ m_{21} & m_{22} \end{pmatrix}$:</label>
+                        <div class="matrix-input-table" style="margin:0.2rem 0;">
+                            <div class="matrix-row">
+                                <input type="number" step="any" class="matrix-cell-input" id="op-m11" value="0.707" title="Элемент m11">
+                                <input type="number" step="any" class="matrix-cell-input" id="op-m12" value="-0.707" title="Элемент m12">
+                            </div>
+                            <div class="matrix-row">
+                                <input type="number" step="any" class="matrix-cell-input" id="op-m21" value="0.707" title="Элемент m21">
+                                <input type="number" step="any" class="matrix-cell-input" id="op-m22" value="0.707" title="Элемент m22">
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:0.35rem; flex-wrap:wrap; margin-top:0.3rem;">
+                            <button type="button" class="btn-chip" id="btn-mat-ident" title="Единичная матрица">I (1,0; 0,1)</button>
+                            <button type="button" class="btn-chip" id="btn-mat-rot90" title="Поворот 90°">R(90°)</button>
+                            <button type="button" class="btn-chip" id="btn-mat-diag" title="Диагональное растяжение">diag(2, 0.5)</button>
+                            <button type="button" class="btn-chip" id="btn-mat-rank1" title="Сингулярная ранга 1">Ранг 1</button>
+                        </div>
+                    </div>
+
+                    <!-- Ввод пользовательского вектора -->
+                    <div class="control-group">
+                        <label style="font-weight:600; margin-bottom:0.3rem;">Вектор $v = (v_x, v_y)^T$:</label>
+                        <div style="display:flex; gap:0.5rem; align-items:center; margin:0.2rem 0;">
+                            <span style="font-weight:600; font-size:0.88rem; color:var(--text-secondary);">X:</span>
+                            <input type="number" step="any" class="matrix-cell-input" id="op-vx" value="2.0" style="width:88px;" title="Координата X вектора v">
+                            <span style="font-weight:600; font-size:0.88rem; color:var(--text-secondary); margin-left:0.2rem;">Y:</span>
+                            <input type="number" step="any" class="matrix-cell-input" id="op-vy" value="1.0" style="width:88px;" title="Координата Y вектора v">
+                        </div>
+                        <div style="display:flex; gap:0.35rem; flex-wrap:wrap; margin-top:0.3rem;">
+                            <button type="button" class="btn-chip" id="btn-vec-preset-1">(2, 1)</button>
+                            <button type="button" class="btn-chip" id="btn-vec-preset-2">(3, 4)</button>
+                            <button type="button" class="btn-chip" id="btn-vec-preset-3">(1, 0)</button>
+                            <button type="button" class="btn-chip" id="btn-vec-preset-4">(-1.5, 2)</button>
+                        </div>
                     </div>
                 </div>
-                <div id="plot-operator-2d" class="plot-container" style="margin-top:1rem;"></div>
+                <div id="plot-operator-2d" class="plot-container" style="margin-top:1.2rem;"></div>
                 <div id="operator-matrix-card" class="callout callout-theory" style="margin-top:1rem;"></div>
             </div>
         </section>
@@ -4164,7 +4268,7 @@
                         </select>
                     </div>
                     <div class="control-group">
-                        <button class="btn btn-primary" id="btn-run-lab3">🚀 Запустить вычисления PCA и сжатия весов</button>
+                        <button class="btn btn-primary" id="btn-run-lab3">Запустить вычисления PCA и сжатия весов</button>
                     </div>
                 </div>
 
@@ -4210,6 +4314,67 @@
     <script src="js/variants.js"></script>
 
     <script src="js/app.js"></script>
+
+
+    <!-- Модальное окно загрузки и конвертации Word (.docx) в модуль курса -->
+    <div id="modal-doc-importer" class="doc-modal" style="display:none;">
+        <div class="doc-modal-backdrop"></div>
+        <div class="doc-modal-content">
+            <div class="doc-modal-header">
+                <h3>Конвертер лекций Word (.docx) в модуль курса</h3>
+                <button id="btn-close-doc-importer" class="btn-close-modal">&times;</button>
+            </div>
+            <div class="doc-modal-body">
+                <p style="font-size:0.92rem; color:var(--text-secondary); margin-bottom:1rem;">
+                    Загрузите вордовский файл с лекцией (например, <code>Лекция_4.docx</code>). Система автоматически преобразует текст, формулы, теоремы и определения в новый интерактивный модуль с поддержкой озвучки (TTS) и формул KaTeX.
+                </p>
+
+                <!-- Зона Drag & Drop -->
+                <div id="docx-dropzone" class="docx-dropzone">
+                    <input type="file" id="docx-file-input" accept=".docx" style="display:none;">
+                    <div class="dropzone-icon">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="color:var(--primary);"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                </div>
+                    <div class="dropzone-text">
+                        <b>Перетащите сюда файл .docx</b> или <span class="dropzone-browse">выберите на компьютере</span>
+                    </div>
+                    <div id="docx-file-name" class="dropzone-filename" style="display:none;"></div>
+                </div>
+
+                <!-- Настройки нового модуля -->
+                <div class="docx-import-settings" style="margin-top:1.2rem; display:grid; grid-template-columns: 1fr 2fr; gap:1rem;">
+                    <div class="control-group">
+                        <label for="import-mod-num">Номер модуля:</label>
+                        <input type="number" id="import-mod-num" min="4" max="20" value="4">
+                    </div>
+                    <div class="control-group">
+                        <label for="import-mod-title">Название модуля:</label>
+                        <input type="text" id="import-mod-title" placeholder="Предел, производная, выпуклость на прямой">
+                    </div>
+                </div>
+
+                <!-- Индикатор прогресса -->
+                <div id="docx-import-progress" class="docx-import-progress" style="display:none; margin-top:1.2rem;">
+                    <div class="progress-bar-track">
+                        <div id="docx-progress-bar" class="progress-bar-fill"></div>
+                    </div>
+                    <div id="docx-status-text" class="progress-status-text">Чтение файла...</div>
+                </div>
+
+                <!-- Сообщения об успехе или ошибке -->
+                <div id="docx-feedback-box" style="display:none; margin-top:1rem;"></div>
+            </div>
+            <div class="doc-modal-footer">
+                <button id="btn-clear-custom-modules" class="btn btn-secondary" style="color:var(--danger); border-color:#e0c8be; margin-right:auto;" title="Удалить все добавленные модули">
+                    Сбросить загрузки
+                </button>
+                <button id="btn-cancel-docx-import" class="btn btn-secondary">Отмена</button>
+                <button id="btn-process-docx" class="btn btn-primary" disabled>
+                    Превратить в модуль
+                </button>
+            </div>
+        </div>
+    </div>
 
 </body>
 
