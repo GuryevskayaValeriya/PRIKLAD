@@ -1,0 +1,463 @@
+/* ==========================================================================
+   QUIZ & GATED LEARNING DESIGN SYSTEM (Coffee & Porcelain)
+   ========================================================================== */
+
+/* 1. Блок общего прогресса в сайдбаре */
+#mod1-progress-container.learning-progress-box {
+    margin: 0.8rem 0.5rem 1.2rem 0.5rem !important;
+    padding: 0.9rem 1rem !important;
+    background: #FFFFFF !important;
+    border: 1px solid #E2D7CC !important;
+    border-radius: 10px !important;
+    box-shadow: 0 2px 8px rgba(42, 29, 23, 0.05) !important;
+    display: block !important;
+}
+
+.learning-progress-box .progress-header {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    font-size: 0.84rem !important;
+    font-weight: 700 !important;
+    color: #2A1D17 !important;
+    margin-bottom: 0.5rem !important;
+}
+
+.learning-progress-box .progress-counter {
+    font-size: 0.76rem !important;
+    font-weight: 700 !important;
+    color: #75523C !important;
+    background: #F4ECE4 !important;
+    padding: 0.2rem 0.55rem !important;
+    border-radius: 12px !important;
+    letter-spacing: 0.02em !important;
+}
+
+.learning-progress-box .progress-track-bg {
+    width: 100% !important;
+    height: 8px !important;
+    background: #EFE8E0 !important;
+    border-radius: 6px !important;
+    overflow: hidden !important;
+    border: 1px solid #E0D3C5 !important;
+    margin-bottom: 0.75rem !important;
+}
+
+.learning-progress-box .progress-track-fill {
+    height: 100% !important;
+    background: linear-gradient(90deg, #75523C 0%, #2D6A4F 100%) !important;
+    border-radius: 6px !important;
+    transition: width 0.4s ease !important;
+}
+
+/* Красивые чип-кнопки для преподавателя / сброса */
+.learning-progress-box .teacher-tools {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 0.4rem !important;
+    padding-top: 0.55rem !important;
+    border-top: 1px dashed #E2D7CC !important;
+}
+
+.btn-tool-chip {
+    flex: 1 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0.35rem 0.5rem !important;
+    background: #F8F5F1 !important;
+    color: #5E3F2D !important;
+    border: 1px solid #D8C8BA !important;
+    border-radius: 6px !important;
+    font-size: 0.72rem !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    transition: all 0.15s ease !important;
+    text-decoration: none !important;
+    outline: none !important;
+}
+
+.btn-tool-chip:hover {
+    background: #EFE6DC !important;
+    border-color: #75523C !important;
+    color: #2A1D17 !important;
+}
+
+.btn-tool-chip:active {
+    transform: translateY(1px) !important;
+}
+
+
+/* 2. Стилизация пунктов меню в сайдбаре (борьба со съезжанием) */
+#nav-group-mod1 .nav-item {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 0.5rem !important;
+    padding: 0.55rem 0.85rem !important;
+    position: relative !important;
+    text-decoration: none !important;
+    white-space: normal !important;
+}
+
+.nav-item-title {
+    flex: 1 1 auto !important;
+    display: inline-block !important;
+    line-height: 1.35 !important;
+    font-size: 0.87rem !important;
+}
+
+.nav-status-badge {
+    flex: 0 0 auto !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 22px !important;
+    height: 22px !important;
+    border-radius: 50% !important;
+    font-size: 0.75rem !important;
+    font-weight: bold !important;
+}
+
+.nav-status-badge.badge-locked {
+    background: #EDE6DE !important;
+    color: #8C7A6E !important;
+    font-size: 0.7rem !important;
+}
+
+.nav-status-badge.badge-open {
+    background: #F4ECE4 !important;
+    color: #75523C !important;
+    font-size: 0.9rem !important;
+    line-height: 1 !important;
+}
+
+.nav-status-badge.badge-success {
+    background: #E5F3E7 !important;
+    color: #2D6A4F !important;
+    font-size: 0.8rem !important;
+}
+
+#nav-group-mod1 .nav-item.locked {
+    opacity: 0.55 !important;
+    cursor: not-allowed !important;
+    background: transparent !important;
+    color: #8C7A6E !important;
+}
+
+#nav-group-mod1 .nav-item.locked:hover {
+    background: #F5EFEB !important;
+}
+
+
+/* 3. Карточка контрольного вопроса внизу секции */
+.quiz-gate-card {
+    margin-top: 3.5rem !important;
+    margin-bottom: 2.5rem !important;
+    padding: 2.2rem 2.4rem !important;
+    background: #FFFFFF !important;
+    border: 1px solid #E2D7CC !important;
+    border-left: 6px solid #75523C !important;
+    border-radius: 12px !important;
+    box-shadow: 0 6px 24px rgba(42, 29, 23, 0.07) !important;
+}
+
+.quiz-gate-header {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    margin-bottom: 1.2rem !important;
+    padding-bottom: 0.9rem !important;
+    border-bottom: 1px solid #F0E8DF !important;
+    flex-wrap: wrap !important;
+    gap: 0.6rem !important;
+}
+
+.quiz-gate-badge {
+    font-size: 0.75rem !important;
+    font-weight: 800 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.08em !important;
+    background: #F4ECE4 !important;
+    color: #75523C !important;
+    padding: 0.35rem 0.75rem !important;
+    border-radius: 6px !important;
+    border: 1px solid #E8DDD2 !important;
+}
+
+.quiz-gate-title {
+    font-size: 1.28rem !important;
+    font-weight: 800 !important;
+    color: #2A1D17 !important;
+    margin: 0 !important;
+}
+
+.quiz-gate-question {
+    font-size: 1.08rem !important;
+    line-height: 1.65 !important;
+    color: #2A1D17 !important;
+    margin-bottom: 1.5rem !important;
+    background: #FAF7F2 !important;
+    padding: 1.2rem 1.4rem !important;
+    border-radius: 8px !important;
+    border-left: 4px solid #75523C !important;
+    box-shadow: inset 0 1px 3px rgba(42, 29, 23, 0.02) !important;
+}
+
+.quiz-options-list {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.75rem !important;
+    margin-bottom: 1.5rem !important;
+}
+
+.quiz-option-label {
+    display: flex !important;
+    align-items: flex-start !important;
+    gap: 0.9rem !important;
+    padding: 0.95rem 1.2rem !important;
+    border: 1.5px solid #E5DCD3 !important;
+    border-radius: 9px !important;
+    background: #FFFFFF !important;
+    cursor: pointer !important;
+    transition: all 0.18s ease !important;
+    user-select: none !important;
+}
+
+.quiz-option-label:hover {
+    background: #FAF5EF !important;
+    border-color: #9E7356 !important;
+    transform: translateX(3px) !important;
+}
+
+.quiz-option-label input[type="radio"] {
+    margin-top: 0.25rem !important;
+    width: 17px !important;
+    height: 17px !important;
+    cursor: pointer !important;
+    accent-color: #75523C !important;
+}
+
+.quiz-option-marker {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 24px !important;
+    height: 24px !important;
+    background: #F3ECE3 !important;
+    color: #5E3F2D !important;
+    font-size: 0.78rem !important;
+    font-weight: 800 !important;
+    border-radius: 5px !important;
+    flex-shrink: 0 !important;
+}
+
+.quiz-option-text {
+    flex: 1 !important;
+    font-size: 1rem !important;
+    line-height: 1.55 !important;
+    color: #2A1D17 !important;
+}
+
+/* Подсветка правильного и неправильного ответа */
+.quiz-option-label.option-correct {
+    background: #EDF7EE !important;
+    border-color: #2D6A4F !important;
+    box-shadow: 0 0 0 1.5px #2D6A4F !important;
+}
+
+.quiz-option-label.option-correct .quiz-option-marker {
+    background: #2D6A4F !important;
+    color: #FFFFFF !important;
+}
+
+.quiz-option-label.option-wrong {
+    background: #FDF2F2 !important;
+    border-color: #B34A3B !important;
+    box-shadow: 0 0 0 1.5px #B34A3B !important;
+    animation: shakeError 0.35s ease !important;
+}
+
+.quiz-option-label.option-wrong .quiz-option-marker {
+    background: #B34A3B !important;
+    color: #FFFFFF !important;
+}
+
+@keyframes shakeError {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-5px); }
+    40% { transform: translateX(5px); }
+    60% { transform: translateX(-3px); }
+    80% { transform: translateX(3px); }
+}
+
+/* Сообщения обратной связи */
+.quiz-feedback {
+    display: none;
+    padding: 1.1rem 1.4rem !important;
+    border-radius: 8px !important;
+    margin-bottom: 1.4rem !important;
+    font-size: 0.98rem !important;
+    line-height: 1.6 !important;
+}
+
+.quiz-feedback.success {
+    display: block !important;
+    background: #EDF7EE !important;
+    border: 1px solid #A3D9A5 !important;
+    color: #1E4620 !important;
+}
+
+.quiz-feedback.error {
+    display: block !important;
+    background: #FDF3F2 !important;
+    border: 1px solid #F1B5B0 !important;
+    color: #78261E !important;
+}
+
+.quiz-hint-box {
+    margin-top: 0.6rem !important;
+    padding: 0.7rem 0.9rem !important;
+    background: rgba(255, 255, 255, 0.85) !important;
+    border-radius: 6px !important;
+    border-left: 3px solid #B34A3B !important;
+    font-size: 0.92rem !important;
+    color: #5A201A !important;
+}
+
+/* Кнопки проверки и перехода */
+.quiz-actions-row {
+    display: flex !important;
+    align-items: center !important;
+    gap: 1.1rem !important;
+    flex-wrap: wrap !important;
+}
+
+.btn-quiz-check {
+    padding: 0.85rem 1.8rem !important;
+    background: #75523C !important;
+    color: #FFFFFF !important;
+    font-weight: 700 !important;
+    font-size: 1rem !important;
+    border: none !important;
+    border-radius: 8px !important;
+    cursor: pointer !important;
+    box-shadow: 0 3px 8px rgba(117, 82, 60, 0.28) !important;
+    transition: all 0.18s ease !important;
+}
+
+.btn-quiz-check:hover {
+    background: #5E3F2D !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 5px 14px rgba(117, 82, 60, 0.38) !important;
+}
+
+.btn-quiz-next {
+    display: none;
+    padding: 0.85rem 1.8rem !important;
+    background: #2D6A4F !important;
+    color: #FFFFFF !important;
+    font-weight: 700 !important;
+    font-size: 1rem !important;
+    border: none !important;
+    border-radius: 8px !important;
+    cursor: pointer !important;
+    box-shadow: 0 3px 8px rgba(45, 106, 79, 0.28) !important;
+    transition: all 0.18s ease !important;
+    animation: pulseNextBtn 1.8s infinite !important;
+}
+
+.btn-quiz-next.visible {
+    display: inline-flex !important;
+    align-items: center !important;
+}
+
+.btn-quiz-next:hover {
+    background: #22513B !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 5px 14px rgba(45, 106, 79, 0.38) !important;
+}
+
+@keyframes pulseNextBtn {
+    0% { box-shadow: 0 0 0 0 rgba(45, 106, 79, 0.45); }
+    70% { box-shadow: 0 0 0 12px rgba(45, 106, 79, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(45, 106, 79, 0); }
+}
+
+
+/* 4. Всплывающее предупреждение (Toast) по центру снизу */
+.quiz-lock-toast {
+    position: fixed !important;
+    bottom: 28px !important;
+    left: 50% !important;
+    transform: translateX(-50%) translateY(90px) !important;
+    background: #2A1D17 !important;
+    color: #FAF8F5 !important;
+    padding: 0.95rem 1.6rem !important;
+    border-radius: 10px !important;
+    font-size: 0.95rem !important;
+    font-weight: 600 !important;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.38) !important;
+    z-index: 999999 !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transition: all 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    text-align: center !important;
+    max-width: 90% !important;
+}
+
+.quiz-lock-toast.show {
+    transform: translateX(-50%) translateY(0) !important;
+    opacity: 1 !important;
+}
+
+
+/* 5. Баннер перехода во введении (sec-intro) */
+.intro-next-step-card {
+    margin-top: 2.5rem !important;
+    padding: 1.8rem 2rem !important;
+    background: #FFFFFF !important;
+    border: 1.5px solid #E2D7CC !important;
+    border-radius: 10px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 1.5rem !important;
+    box-shadow: 0 3px 12px rgba(42, 29, 23, 0.04) !important;
+    flex-wrap: wrap !important;
+}
+
+.intro-next-info h3 {
+    margin: 0 0 0.3rem 0 !important;
+    font-size: 1.18rem !important;
+    color: #2A1D17 !important;
+}
+
+.intro-next-info p {
+    margin: 0 !important;
+    font-size: 0.92rem !important;
+    color: #7E6C60 !important;
+}
+
+.btn-start-course {
+    padding: 0.85rem 1.8rem !important;
+    background: #75523C !important;
+    color: #FFFFFF !important;
+    font-weight: 700 !important;
+    font-size: 1rem !important;
+    border: none !important;
+    border-radius: 8px !important;
+    cursor: pointer !important;
+    transition: all 0.18s ease !important;
+    text-decoration: none !important;
+    box-shadow: 0 3px 8px rgba(117, 82, 60, 0.25) !important;
+}
+
+.btn-start-course:hover {
+    background: #5E3F2D !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 5px 14px rgba(117, 82, 60, 0.35) !important;
+}

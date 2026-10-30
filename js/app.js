@@ -905,78 +905,99 @@ function safeRenderMath(el) {
     }
 }
 
-function setupNavigation() {
-    // Переключение между модулями курса (Модуль 1 / Модуль 2)
+function switchModule(modId) {
     const moduleTabs = document.querySelectorAll('.btn-module-tab');
-    moduleTabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-            moduleTabs.forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-
-            const modId = tab.getAttribute('data-module');
-            const group1 = document.getElementById('nav-group-mod1');
-            const group2 = document.getElementById('nav-group-mod2');
-            const indicator = document.getElementById('course-section-indicator');
-
-            if (window.TTSController) window.TTSController.stop();
-            document.querySelectorAll('.content-section').forEach(sec => sec.classList.remove('active'));
-            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
-
-            const group3 = document.getElementById('nav-group-mod3');
-
-            if (modId === '1') {
-                if (group1) group1.style.display = 'block';
-                if (group2) group2.style.display = 'none';
-                if (group3) group3.style.display = 'none';
-                if (indicator) indicator.textContent = 'Раздел 1: Векторные пространства и нормы';
-                const firstNav = group1?.querySelector('.nav-item[data-target="sec-intro"]');
-                firstNav?.classList.add('active');
-                const introSec = document.getElementById('sec-intro');
-                if (introSec) introSec.classList.add('active');
-                triggerRenderForSection('sec-intro');
-            } else if (modId === '2') {
-                if (group1) group1.style.display = 'none';
-                if (group2) group2.style.display = 'block';
-                if (group3) group3.style.display = 'none';
-                if (indicator) indicator.textContent = 'Раздел 2: Системы, операторы, проекции';
-                const firstNav = group2?.querySelector('.nav-item[data-target="sec-2-intro"]');
-                firstNav?.classList.add('active');
-                const introSec = document.getElementById('sec-2-intro');
-                if (introSec) introSec.classList.add('active');
-                triggerRenderForSection('sec-2-intro');
-                safeRenderMath(introSec);
-            } else if (modId === '3') {
-                if (group1) group1.style.display = 'none';
-                if (group2) group2.style.display = 'none';
-                if (group3) group3.style.display = 'block';
-                if (indicator) indicator.textContent = 'Раздел 3: Спектр, SVD, тензоры';
-                const firstNav = group3?.querySelector('.nav-item[data-target="sec-3-intro"]');
-                firstNav?.classList.add('active');
-                const introSec = document.getElementById('sec-3-intro');
-                if (introSec) introSec.classList.add('active');
-                triggerRenderForSection('sec-3-intro');
-            }
-        });
+    moduleTabs.forEach(t => {
+        if (t.getAttribute('data-module') === String(modId)) {
+            t.classList.add('active');
+        } else {
+            t.classList.remove('active');
+        }
     });
 
-    // Навигация по разделам внутри модулей
-    const navItems = document.querySelectorAll('.nav-item');
-    navItems.forEach(item => {
-        item.addEventListener('click', () => {
-            navItems.forEach(el => el.classList.remove('active'));
-            item.classList.add('active');
+    const indicator = document.getElementById('course-section-indicator');
+    if (window.TTSController) window.TTSController.stop();
+    document.querySelectorAll('.content-section').forEach(sec => sec.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+    document.querySelectorAll('.module-nav-group').forEach(grp => grp.style.display = 'none');
 
-            const targetId = item.getAttribute('data-target');
+    const group1 = document.getElementById('nav-group-mod1');
+    const group2 = document.getElementById('nav-group-mod2');
+    const group3 = document.getElementById('nav-group-mod3');
+
+    if (String(modId) === '1') {
+        if (group1) group1.style.display = 'block';
+        if (indicator) indicator.textContent = 'Раздел 1: Векторные пространства и нормы';
+        const firstNav = group1?.querySelector('.nav-item[data-target="sec-intro"]');
+        firstNav?.classList.add('active');
+        const introSec = document.getElementById('sec-intro');
+        if (introSec) introSec.classList.add('active');
+        triggerRenderForSection('sec-intro');
+    } else if (String(modId) === '2') {
+        if (group2) group2.style.display = 'block';
+        if (indicator) indicator.textContent = 'Раздел 2: Системы, операторы, проекции';
+        const firstNav = group2?.querySelector('.nav-item[data-target="sec-2-intro"]');
+        firstNav?.classList.add('active');
+        const introSec = document.getElementById('sec-2-intro');
+        if (introSec) introSec.classList.add('active');
+        triggerRenderForSection('sec-2-intro');
+        safeRenderMath(introSec);
+    } else if (String(modId) === '3') {
+        if (group3) group3.style.display = 'block';
+        if (indicator) indicator.textContent = 'Раздел 3: Спектр, SVD, тензоры';
+        const firstNav = group3?.querySelector('.nav-item[data-target="sec-3-intro"]');
+        firstNav?.classList.add('active');
+        const introSec = document.getElementById('sec-3-intro');
+        if (introSec) introSec.classList.add('active');
+        triggerRenderForSection('sec-3-intro');
+    } else {
+        const customGroup = document.getElementById(`nav-group-mod${modId}`);
+        if (customGroup) customGroup.style.display = 'block';
+        const tab = document.querySelector(`.btn-module-tab[data-module="${modId}"]`);
+        const title = tab?.getAttribute('data-title') || `Раздел ${modId}`;
+        if (indicator) indicator.textContent = title;
+        const firstNav = customGroup?.querySelector('.nav-item');
+        if (firstNav) {
+            firstNav.classList.add('active');
+            const targetId = firstNav.getAttribute('data-target');
+            const targetSec = document.getElementById(targetId);
+            if (targetSec) {
+                targetSec.classList.add('active');
+                safeRenderMath(targetSec);
+            }
+        }
+    }
+}
+window.switchModule = switchModule;
+
+function setupNavigation() {
+    // Делегирование кликов по переключателям модулей и пунктам меню (поддерживает динамические модули)
+    document.addEventListener('click', (e) => {
+        const tab = e.target.closest('.btn-module-tab');
+        if (tab) {
+            const modId = tab.getAttribute('data-module');
+            if (modId) switchModule(modId);
+            return;
+        }
+
+        const navItem = e.target.closest('.nav-item');
+        if (navItem) {
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            navItem.classList.add('active');
+
+            const targetId = navItem.getAttribute('data-target');
             if (window.TTSController) window.TTSController.stop();
             document.querySelectorAll('.content-section').forEach(sec => sec.classList.remove('active'));
             const activeSec = document.getElementById(targetId);
             if (activeSec) {
                 activeSec.classList.add('active');
-                triggerRenderForSection(targetId);
+                if (typeof triggerRenderForSection === 'function') {
+                    triggerRenderForSection(targetId);
+                }
                 safeRenderMath(activeSec);
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             }
-        });
+        }
     });
 }
 
@@ -1008,10 +1029,8 @@ function triggerRenderForSection(sectionId) {
     } else if (sectionId === 'sec-2-4') {
         renderCanonicalOperators2D();
         updateLinearOperatorStand();
-    } else if (sectionId === 'sec-2-4') {
-        const type = document.getElementById('select-operator-type')?.value || 'rotate';
-        const angle = parseFloat(document.getElementById('slider-op-angle')?.value || 45);
-        renderLinearOperator2D(type, angle);
+    } else if (sectionId === 'sec-2-5') {
+        updateKernelImageStand();
     } else if (sectionId === 'sec-2-6') {
         renderGramSchmidt3D(currentGsStep !== undefined ? currentGsStep : 4);
     } else if (sectionId === 'sec-2-7') {
@@ -1258,6 +1277,7 @@ function rafThrottle(fn) {
 document.addEventListener('DOMContentLoaded', () => {
     setupNavigation();
     TTSController.init();
+    DocxProcessor.init();
 
     // Инициализация калькулятора Гаусса со встроенной сеткой
     const selectRows = document.getElementById('gauss-select-rows');
@@ -1438,6 +1458,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 2.4 Интерактивный трансформер 2D
     initLinearOperatorStandControls();
+
+    // 2.5 Интерактивная лаборатория ядра и образа
+    initKernelImageStandControls();
 
     // 2.6 Процесс Грама-Шмидта (пошаговая ортогонализация Шаги 0-4)
     document.getElementById('btn-gs-step0')?.addEventListener('click', () => renderGramSchmidt3D(0));
@@ -2610,6 +2633,920 @@ function renderLinearOperator2D(opType = 'rotate', param = 45, customMatrix = nu
         }
     }
 }
+// =========================================================================
+// [2.5] ИНТЕРАКТИВНЫЙ СТЕНД: ЯДРО Ker(T) И ОБРАЗ Im(T) ОПЕРАТОРА
+// =========================================================================
+
+let currentKerImgDim = 2; // 2 или 3
+let currentKerImgMatrix = [
+    [1, -1],
+    [2, -2]
+];
+let currentKerImgVector = [1, 1];
+
+// Вспомогательные математические алгоритмы
+function kerImgMatMulVec(M, v) {
+    const n = M.length;
+    const res = new Array(n).fill(0);
+    for (let i = 0; i < n; i++) {
+        let s = 0;
+        for (let j = 0; j < n; j++) {
+            s += M[i][j] * v[j];
+        }
+        res[i] = s;
+    }
+    return res;
+}
+
+function kerImgComputeRrefAndBases(M) {
+    const n = M.length;
+    const A = M.map(row => [...row]);
+    const EPS = 1e-6;
+    let pivotRow = 0;
+    const pivotCols = [];
+
+    for (let c = 0; c < n && pivotRow < n; c++) {
+        let maxRow = pivotRow;
+        let maxVal = Math.abs(A[pivotRow][c]);
+        for (let r = pivotRow + 1; r < n; r++) {
+            if (Math.abs(A[r][c]) > maxVal) {
+                maxVal = Math.abs(A[r][c]);
+                maxRow = r;
+            }
+        }
+
+        if (maxVal < EPS) continue;
+
+        if (maxRow !== pivotRow) {
+            const tmp = A[pivotRow];
+            A[pivotRow] = A[maxRow];
+            A[maxRow] = tmp;
+        }
+
+        const pivotVal = A[pivotRow][c];
+        for (let j = c; j < n; j++) {
+            A[pivotRow][j] /= pivotVal;
+        }
+
+        for (let r = 0; r < n; r++) {
+            if (r !== pivotRow && Math.abs(A[r][c]) > EPS) {
+                const factor = A[r][c];
+                for (let j = c; j < n; j++) {
+                    A[r][j] -= factor * A[pivotRow][j];
+                }
+            }
+        }
+
+        pivotCols.push(c);
+        pivotRow++;
+    }
+
+    const rank = pivotCols.length;
+    const nullity = n - rank;
+    const imageBasis = pivotCols.map(c => M.map(row => row[c]));
+
+    const freeCols = [];
+    for (let c = 0; c < n; c++) {
+        if (!pivotCols.includes(c)) freeCols.push(c);
+    }
+
+    const kernelBasis = [];
+    for (const freeCol of freeCols) {
+        const kVec = new Array(n).fill(0);
+        kVec[freeCol] = 1;
+        for (let r = 0; r < pivotCols.length; r++) {
+            const pCol = pivotCols[r];
+            kVec[pCol] = -A[r][freeCol];
+        }
+
+        for (let i = 0; i < n; i++) {
+            if (Math.abs(kVec[i]) < EPS) kVec[i] = 0;
+            if (Math.abs(kVec[i] - Math.round(kVec[i])) < 1e-4) {
+                kVec[i] = Math.round(kVec[i]);
+            }
+        }
+
+        let bestScale = 1;
+        for (let s = 1; s <= 12; s++) {
+            const scaled = kVec.map(x => x * s);
+            if (scaled.every(x => Math.abs(x - Math.round(x)) < 1e-3)) {
+                bestScale = s;
+                break;
+            }
+        }
+        const cleanVec = kVec.map(x => Math.round(x * bestScale * 1000) / 1000);
+        kernelBasis.push(cleanVec);
+    }
+
+    return { rank, nullity, pivotCols, freeCols, imageBasis, kernelBasis, rref: A };
+}
+
+function buildKerImgInputs() {
+    const tableEl = document.getElementById('table-kerimg-matrix');
+    const vecContainer = document.getElementById('container-kerimg-vector');
+    if (!tableEl || !vecContainer) return;
+
+    const n = currentKerImgDim;
+
+    // Матрица T
+    let matrixHtml = '';
+    for (let r = 0; r < n; r++) {
+        matrixHtml += '<div class="matrix-row">';
+        for (let c = 0; c < n; c++) {
+            const val = (currentKerImgMatrix[r] && currentKerImgMatrix[r][c] !== undefined)
+                ? currentKerImgMatrix[r][c] : 0;
+            matrixHtml += `<input type="number" step="any" class="matrix-cell-input" id="kerimg-m-${r}-${c}" value="${val}" style="width:${n === 2 ? 80 : 64}px;">`;
+        }
+        matrixHtml += '</div>';
+    }
+    tableEl.innerHTML = matrixHtml;
+
+    // Вектор x
+    let vecHtml = '<span style="font-family:monospace; font-weight:600; margin-right:4px;">x = (</span>';
+    for (let i = 0; i < n; i++) {
+        const val = (currentKerImgVector[i] !== undefined) ? currentKerImgVector[i] : 1;
+        vecHtml += `<input type="number" step="any" class="matrix-cell-input" id="kerimg-v-${i}" value="${val}" style="width:${n === 2 ? 75 : 62}px;">`;
+        if (i < n - 1) vecHtml += '<span style="margin:0 4px; font-weight:600;">,</span>';
+    }
+    vecHtml += '<span style="font-family:monospace; font-weight:600; margin-left:4px;">)ᵀ</span>';
+    vecContainer.innerHTML = vecHtml;
+
+    // Навешивание слушателей на все инпуты матрицы
+    for (let r = 0; r < n; r++) {
+        for (let c = 0; c < n; c++) {
+            const inp = document.getElementById(`kerimg-m-${r}-${c}`);
+            inp?.addEventListener('input', () => {
+                readKerImgInputs();
+                throttledUpdateKernelImageStand();
+            });
+        }
+    }
+
+    // Навешивание слушателей на инпуты вектора
+    for (let i = 0; i < n; i++) {
+        const inp = document.getElementById(`kerimg-v-${i}`);
+        inp?.addEventListener('input', () => {
+            readKerImgInputs();
+            throttledUpdateKernelImageStand();
+        });
+    }
+
+    safeRenderMath(document.getElementById('stand-kernel-image'));
+}
+
+function readKerImgInputs() {
+    const n = currentKerImgDim;
+    const M = [];
+    for (let r = 0; r < n; r++) {
+        const row = [];
+        for (let c = 0; c < n; c++) {
+            const val = parseFloat(document.getElementById(`kerimg-m-${r}-${c}`)?.value || 0);
+            row.push(isNaN(val) ? 0 : val);
+        }
+        M.push(row);
+    }
+    currentKerImgMatrix = M;
+
+    const v = [];
+    for (let i = 0; i < n; i++) {
+        const val = parseFloat(document.getElementById(`kerimg-v-${i}`)?.value || 0);
+        v.push(isNaN(val) ? 0 : val);
+    }
+    currentKerImgVector = v;
+}
+
+function setKerImgMatrixAndVector(M, v) {
+    currentKerImgMatrix = M.map(row => [...row]);
+    currentKerImgVector = [...v];
+    const n = currentKerImgDim;
+    for (let r = 0; r < n; r++) {
+        for (let c = 0; c < n; c++) {
+            const inp = document.getElementById(`kerimg-m-${r}-${c}`);
+            if (inp) inp.value = M[r][c];
+        }
+    }
+    for (let i = 0; i < n; i++) {
+        const inp = document.getElementById(`kerimg-v-${i}`);
+        if (inp) inp.value = v[i];
+    }
+    throttledUpdateKernelImageStand();
+}
+
+const throttledUpdateKernelImageStand = rafThrottle(() => {
+    updateKernelImageStand();
+});
+
+function initKernelImageStandControls() {
+    const btn2D = document.getElementById('btn-kerimg-dim-2d');
+    const btn3D = document.getElementById('btn-kerimg-dim-3d');
+
+    btn2D?.addEventListener('click', () => {
+        if (currentKerImgDim === 2) return;
+        currentKerImgDim = 2;
+        btn2D.classList.add('active');
+        btn3D?.classList.remove('active');
+        currentKerImgMatrix = [[1, -1], [2, -2]];
+        currentKerImgVector = [1, 1];
+        buildKerImgInputs();
+        updateKernelImageStand();
+    });
+
+    btn3D?.addEventListener('click', () => {
+        if (currentKerImgDim === 3) return;
+        currentKerImgDim = 3;
+        btn3D.classList.add('active');
+        btn2D?.classList.remove('active');
+        currentKerImgMatrix = [
+            [1, 2, 1],
+            [2, 4, 2],
+            [1, 1, 0]
+        ];
+        currentKerImgVector = [1, -1, 1];
+        buildKerImgInputs();
+        updateKernelImageStand();
+    });
+
+    // Пресеты
+    document.getElementById('btn-kerimg-preset-lecture')?.addEventListener('click', () => {
+        if (currentKerImgDim !== 3) {
+            currentKerImgDim = 3;
+            btn3D?.classList.add('active');
+            btn2D?.classList.remove('active');
+            buildKerImgInputs();
+        }
+        setKerImgMatrixAndVector([
+            [1, 2, 1],
+            [2, 4, 2],
+            [1, 1, 0]
+        ], [1, -1, 1]);
+    });
+
+    document.getElementById('btn-kerimg-preset-proj')?.addEventListener('click', () => {
+        if (currentKerImgDim === 2) {
+            setKerImgMatrixAndVector([[1, 0], [0, 0]], [2, 3]);
+        } else {
+            setKerImgMatrixAndVector([[1, 0, 0], [0, 1, 0], [0, 0, 0]], [2, 3, 4]);
+        }
+    });
+
+    document.getElementById('btn-kerimg-preset-rank1')?.addEventListener('click', () => {
+        if (currentKerImgDim === 2) {
+            setKerImgMatrixAndVector([[1, 2], [2, 4]], [-2, 1]);
+        } else {
+            setKerImgMatrixAndVector([[1, 2, 1], [2, 4, 2], [3, 6, 3]], [1, 0, -1]);
+        }
+    });
+
+    document.getElementById('btn-kerimg-preset-full')?.addEventListener('click', () => {
+        if (currentKerImgDim === 2) {
+            setKerImgMatrixAndVector([[2, 1], [1, 2]], [2, 1]);
+        } else {
+            setKerImgMatrixAndVector([[2, 0, 1], [0, 3, 0], [1, 0, 2]], [1, 2, 1]);
+        }
+    });
+
+    document.getElementById('btn-kerimg-preset-zero')?.addEventListener('click', () => {
+        if (currentKerImgDim === 2) {
+            setKerImgMatrixAndVector([[0, 0], [0, 0]], [1, 2]);
+        } else {
+            setKerImgMatrixAndVector([[0, 0, 0], [0, 0, 0], [0, 0, 0]], [1, 2, 3]);
+        }
+    });
+
+    // Быстрые кнопки тестового вектора x
+    document.getElementById('btn-kerimg-vec-kernel')?.addEventListener('click', () => {
+        const { kernelBasis, nullity } = kerImgComputeRrefAndBases(currentKerImgMatrix);
+        if (nullity > 0 && kernelBasis.length > 0) {
+            const kv = kernelBasis[0];
+            for (let i = 0; i < currentKerImgDim; i++) {
+                currentKerImgVector[i] = kv[i];
+                const inp = document.getElementById(`kerimg-v-${i}`);
+                if (inp) inp.value = kv[i];
+            }
+        } else {
+            for (let i = 0; i < currentKerImgDim; i++) {
+                currentKerImgVector[i] = 0;
+                const inp = document.getElementById(`kerimg-v-${i}`);
+                if (inp) inp.value = 0;
+            }
+        }
+        throttledUpdateKernelImageStand();
+    });
+
+    document.getElementById('btn-kerimg-vec-basis1')?.addEventListener('click', () => {
+        for (let i = 0; i < currentKerImgDim; i++) {
+            currentKerImgVector[i] = (i === 0) ? 1 : 0;
+            const inp = document.getElementById(`kerimg-v-${i}`);
+            if (inp) inp.value = currentKerImgVector[i];
+        }
+        throttledUpdateKernelImageStand();
+    });
+
+    document.getElementById('btn-kerimg-vec-random')?.addEventListener('click', () => {
+        for (let i = 0; i < currentKerImgDim; i++) {
+            const randVal = Math.floor(Math.random() * 7) - 3;
+            currentKerImgVector[i] = randVal;
+            const inp = document.getElementById(`kerimg-v-${i}`);
+            if (inp) inp.value = randVal;
+        }
+        throttledUpdateKernelImageStand();
+    });
+
+    buildKerImgInputs();
+    updateKernelImageStand();
+}
+
+function updateKernelImageStand() {
+    const domainContainer = document.getElementById('plot-kernel-domain');
+    const codomainContainer = document.getElementById('plot-image-codomain');
+    if (!domainContainer || !codomainContainer) return;
+
+    const n = currentKerImgDim;
+    const M = currentKerImgMatrix;
+    const x = currentKerImgVector;
+
+    // Вычисление T(x)
+    const Tx = kerImgMatMulVec(M, x);
+    const normTx = Math.hypot(...Tx);
+    const inKernel = normTx < 1e-4;
+
+    // Вычисление RREF, ранга, дефекта и базисов
+    const { rank, nullity, imageBasis, kernelBasis } = kerImgComputeRrefAndBases(M);
+
+    // Обновление бейджей статуса
+    const badgeKer = document.getElementById('badge-kernel-status');
+    const badgeImg = document.getElementById('badge-image-status');
+    if (badgeKer) {
+        badgeKer.textContent = `dim Ker(T) = ${nullity} (${nullity === 0 ? 'тривиальное {0}' : (nullity === 1 ? 'прямая' : (nullity === 2 ? 'плоскость' : 'всё ℝ³'))})`;
+    }
+    if (badgeImg) {
+        badgeImg.textContent = `dim Im(T) = ${rank} (ранг ${rank}: ${rank === 0 ? '{0}' : (rank === 1 ? 'прямая' : (rank === 2 ? (n === 2 ? 'вся плоскость' : 'плоскость в 3D') : 'всё ℝ³'))})`;
+    }
+
+    if (n === 2) {
+        renderKernelImageStand2D(M, x, Tx, inKernel, rank, nullity, imageBasis, kernelBasis);
+    } else {
+        renderKernelImageStand3D(M, x, Tx, inKernel, rank, nullity, imageBasis, kernelBasis);
+    }
+
+    renderKernelImageAnalysis(M, x, Tx, inKernel, rank, nullity, imageBasis, kernelBasis);
+}
+
+// -------------------------------------------------------------------------
+// 2D РЕНДЕРИНГ ДВУХ ОКОН (V и W друг над другом)
+// -------------------------------------------------------------------------
+function renderKernelImageStand2D(M, x, Tx, inKernel, rank, nullity, imageBasis, kernelBasis) {
+    const domainContainer = document.getElementById('plot-kernel-domain');
+    const codomainContainer = document.getElementById('plot-image-codomain');
+
+    const layoutBase = {
+        showlegend: true,
+        legend: {
+            orientation: 'h',
+            x: 0.5,
+            xanchor: 'center',
+            y: 1.1,
+            font: { size: 11, family: 'Inter, sans-serif', color: '#2a1d17' }
+        },
+        paper_bgcolor: 'rgba(0,0,0,0)',
+        plot_bgcolor: 'rgba(0,0,0,0)',
+        font: { family: 'Inter, sans-serif', color: '#2a1d17' },
+        margin: { l: 45, r: 35, t: 40, b: 35 },
+        height: 390,
+        xaxis: {
+            range: [-4.2, 4.2],
+            zeroline: true,
+            zerolinecolor: '#4a3b32',
+            zerolinewidth: 1.5,
+            gridcolor: '#f0e9df',
+            tickfont: { size: 11 }
+        },
+        yaxis: {
+            range: [-4.2, 4.2],
+            zeroline: true,
+            zerolinecolor: '#4a3b32',
+            zerolinewidth: 1.5,
+            gridcolor: '#f0e9df',
+            scaleanchor: 'x',
+            scaleratio: 1,
+            tickfont: { size: 11 }
+        }
+    };
+
+    // 1. ПРОСТРАНСТВО ПРООБРАЗОВ V: ядро Ker(T) и тестовый вектор x
+    const domainTraces = [];
+
+    if (nullity === 0) {
+        domainTraces.push({
+            x: [0],
+            y: [0],
+            mode: 'markers',
+            marker: { size: 8, color: '#75523c', symbol: 'circle' },
+            name: 'Ker(T) = {0}',
+            hoverinfo: 'name'
+        });
+    } else if (nullity === 1) {
+        const k1 = kernelBasis[0];
+        const span = 12;
+        domainTraces.push({
+            x: [-span * k1[0], span * k1[0]],
+            y: [-span * k1[1], span * k1[1]],
+            mode: 'lines',
+            line: { color: '#8d674b', width: 3, dash: 'dash' },
+            name: 'Ядро Ker(T)',
+            hoverinfo: 'name'
+        });
+        domainTraces.push({
+            x: [0, k1[0]],
+            y: [0, k1[1]],
+            mode: 'lines+markers+text',
+            line: { color: '#75523c', width: 4 },
+            marker: { size: [2, 7], color: '#75523c' },
+            text: ['', `k₁ (${k1[0]}, ${k1[1]})`],
+            textposition: 'top right',
+            name: `Базис Ker: (${k1[0]}, ${k1[1]})`
+        });
+    } else if (nullity === 2) {
+        domainTraces.push({
+            x: [-5, 5, 5, -5, -5],
+            y: [-5, -5, 5, 5, -5],
+            fill: 'toself',
+            fillcolor: 'rgba(117, 82, 60, 0.1)',
+            mode: 'lines',
+            line: { color: '#8d674b', width: 1.5, dash: 'dot' },
+            name: 'Ker(T) = ℝ²',
+            hoverinfo: 'name'
+        });
+    }
+
+    // Тестовый вектор x
+    const vecColor = inKernel ? '#75523c' : '#205493';
+    domainTraces.push({
+        x: [0, x[0]],
+        y: [0, x[1]],
+        mode: 'lines+markers+text',
+        line: { color: vecColor, width: 4.5 },
+        marker: { size: [2, 8], color: vecColor },
+        text: ['', `x (${x[0]}, ${x[1]})`],
+        textposition: 'bottom right',
+        name: inKernel ? 'Вектор x ∈ Ker(T)' : 'Вектор x'
+    });
+
+    Plotly.react(domainContainer, domainTraces, layoutBase, { responsive: true, displayModeBar: false });
+
+    // 2. ПРОСТРАНСТВО ОБРАЗОВ W: образ Im(T) и образ вектора T(x)
+    const codomainTraces = [];
+
+    if (rank === 0) {
+        codomainTraces.push({
+            x: [0],
+            y: [0],
+            mode: 'markers',
+            marker: { size: 8, color: '#5f7a4e', symbol: 'circle' },
+            name: 'Im(T) = {0}',
+            hoverinfo: 'name'
+        });
+    } else if (rank === 1) {
+        const b1 = imageBasis[0];
+        const span = 12;
+        codomainTraces.push({
+            x: [-span * b1[0], span * b1[0]],
+            y: [-span * b1[1], span * b1[1]],
+            mode: 'lines',
+            line: { color: '#5f7a4e', width: 3, dash: 'dash' },
+            name: 'Образ Im(T)',
+            hoverinfo: 'name'
+        });
+        codomainTraces.push({
+            x: [0, b1[0]],
+            y: [0, b1[1]],
+            mode: 'lines+markers+text',
+            line: { color: '#435a34', width: 4 },
+            marker: { size: [2, 7], color: '#435a34' },
+            text: ['', `b₁ (${b1[0]}, ${b1[1]})`],
+            textposition: 'top right',
+            name: `Базис Im: (${b1[0]}, ${b1[1]})`
+        });
+    } else if (rank === 2) {
+        codomainTraces.push({
+            x: [-5, 5, 5, -5, -5],
+            y: [-5, -5, 5, 5, -5],
+            fill: 'toself',
+            fillcolor: 'rgba(95, 122, 78, 0.1)',
+            mode: 'lines',
+            line: { color: '#5f7a4e', width: 1.5, dash: 'dot' },
+            name: 'Im(T) = ℝ²',
+            hoverinfo: 'name'
+        });
+        const col1 = [M[0][0], M[1][0]];
+        const col2 = [M[0][1], M[1][1]];
+        codomainTraces.push({
+            x: [0, col1[0]],
+            y: [0, col1[1]],
+            mode: 'lines+markers+text',
+            line: { color: '#b34a3b', width: 2.5 },
+            marker: { size: [2, 6], color: '#b34a3b' },
+            text: ['', `T(e₁) (${col1[0]}, ${col1[1]})`],
+            textposition: 'top right',
+            name: 'T(e₁)'
+        });
+        codomainTraces.push({
+            x: [0, col2[0]],
+            y: [0, col2[1]],
+            mode: 'lines+markers+text',
+            line: { color: '#5f7a4e', width: 2.5 },
+            marker: { size: [2, 6], color: '#5f7a4e' },
+            text: ['', `T(e₂) (${col2[0]}, ${col2[1]})`],
+            textposition: 'top left',
+            name: 'T(e₂)'
+        });
+    }
+
+    // Образ тестового вектора T(x)
+    if (inKernel) {
+        codomainTraces.push({
+            x: [0],
+            y: [0],
+            mode: 'markers+text',
+            marker: { size: 9, color: '#b34a3b', symbol: 'circle' },
+            text: ['  T(x) = 0'],
+            textposition: 'bottom right',
+            textfont: { color: '#b34a3b', size: 11, family: 'Inter, sans-serif' },
+            name: 'T(x) = 0 (в ядре)'
+        });
+    } else {
+        codomainTraces.push({
+            x: [0, Tx[0]],
+            y: [0, Tx[1]],
+            mode: 'lines+markers+text',
+            line: { color: '#b34a3b', width: 4.5 },
+            marker: { size: [2, 8], color: '#b34a3b' },
+            text: ['', `T(x) (${Tx[0].toFixed(1)}, ${Tx[1].toFixed(1)})`],
+            textposition: 'top right',
+            name: `T(x) = (${Tx[0].toFixed(1)}, ${Tx[1].toFixed(1)})`
+        });
+    }
+
+    Plotly.react(codomainContainer, codomainTraces, layoutBase, { responsive: true, displayModeBar: false });
+}
+
+// -------------------------------------------------------------------------
+// 3D РЕНДЕРИНГ ДВУХ ОКОН (V и W друг над другом)
+// -------------------------------------------------------------------------
+function renderKernelImageStand3D(M, x, Tx, inKernel, rank, nullity, imageBasis, kernelBasis) {
+    const domainContainer = document.getElementById('plot-kernel-domain');
+    const codomainContainer = document.getElementById('plot-image-codomain');
+
+    const layout3DBase = {
+        showlegend: true,
+        legend: {
+            orientation: 'h',
+            x: 0.5,
+            xanchor: 'center',
+            y: 1.05,
+            font: { size: 11, family: 'Inter, sans-serif', color: '#2a1d17' }
+        },
+        paper_bgcolor: 'rgba(0,0,0,0)',
+        plot_bgcolor: 'rgba(0,0,0,0)',
+        font: { family: 'Inter, sans-serif', color: '#2a1d17' },
+        margin: { l: 20, r: 20, t: 25, b: 20 },
+        height: 430,
+        scene: {
+            aspectmode: 'cube',
+            xaxis: { range: [-3.8, 3.8], title: 'X', zerolinecolor: '#4a3b32', gridcolor: '#f0e9df' },
+            yaxis: { range: [-3.8, 3.8], title: 'Y', zerolinecolor: '#4a3b32', gridcolor: '#f0e9df' },
+            zaxis: { range: [-3.8, 3.8], title: 'Z', zerolinecolor: '#4a3b32', gridcolor: '#f0e9df' },
+            camera: { eye: { x: 1.5, y: -1.5, z: 1.2 } }
+        }
+    };
+
+    // 1. ПРОСТРАНСТВО ПРООБРАЗОВ V: ℝ³
+    const domainTraces = [];
+
+    if (nullity === 0) {
+        domainTraces.push({
+            type: 'scatter3d',
+            x: [0], y: [0], z: [0],
+            mode: 'markers',
+            marker: { size: 6, color: '#75523c' },
+            name: 'Ker(T) = {0}'
+        });
+    } else if (nullity === 1) {
+        const k1 = kernelBasis[0];
+        const span = 8;
+        domainTraces.push({
+            type: 'scatter3d',
+            x: [-span * k1[0], span * k1[0]],
+            y: [-span * k1[1], span * k1[1]],
+            z: [-span * k1[2], span * k1[2]],
+            mode: 'lines',
+            line: { color: '#8d674b', width: 5, dash: 'dash' },
+            name: 'Ядро Ker(T)'
+        });
+        domainTraces.push({
+            type: 'scatter3d',
+            x: [0, k1[0]], y: [0, k1[1]], z: [0, k1[2]],
+            mode: 'lines+markers+text',
+            line: { color: '#75523c', width: 6 },
+            marker: { size: [2, 5], color: '#75523c' },
+            text: ['', `k₁ (${k1[0]}, ${k1[1]}, ${k1[2]})`],
+            name: 'Базис Ker k₁'
+        });
+    } else if (nullity === 2) {
+        const k1 = kernelBasis[0];
+        const k2 = kernelBasis[1];
+        const s = 3.5;
+        const p00 = [-s * k1[0] - s * k2[0], -s * k1[1] - s * k2[1], -s * k1[2] - s * k2[2]];
+        const p10 = [ s * k1[0] - s * k2[0],  s * k1[1] - s * k2[1],  s * k1[2] - s * k2[2]];
+        const p11 = [ s * k1[0] + s * k2[0],  s * k1[1] + s * k2[1],  s * k1[2] + s * k2[2]];
+        const p01 = [-s * k1[0] + s * k2[0], -s * k1[1] + s * k2[1], -s * k1[2] + s * k2[2]];
+
+        domainTraces.push({
+            type: 'mesh3d',
+            x: [p00[0], p10[0], p11[0], p01[0]],
+            y: [p00[1], p10[1], p11[1], p01[1]],
+            z: [p00[2], p10[2], p11[2], p01[2]],
+            i: [0, 0], j: [1, 2], k: [2, 3],
+            opacity: 0.35,
+            color: '#c2a897',
+            name: 'Ядро Ker(T) (плоскость)'
+        });
+        domainTraces.push({
+            type: 'scatter3d',
+            x: [0, k1[0]], y: [0, k1[1]], z: [0, k1[2]],
+            mode: 'lines+markers',
+            line: { color: '#75523c', width: 6 },
+            marker: { size: 5, color: '#75523c' },
+            name: 'Базис Ker k₁'
+        });
+        domainTraces.push({
+            type: 'scatter3d',
+            x: [0, k2[0]], y: [0, k2[1]], z: [0, k2[2]],
+            mode: 'lines+markers',
+            line: { color: '#a07855', width: 6 },
+            marker: { size: 5, color: '#a07855' },
+            name: 'Базис Ker k₂'
+        });
+    }
+
+    // Тестовый вектор x
+    const vecColor = inKernel ? '#75523c' : '#205493';
+    domainTraces.push({
+        type: 'scatter3d',
+        x: [0, x[0]], y: [0, x[1]], z: [0, x[2]],
+        mode: 'lines+markers+text',
+        line: { color: vecColor, width: 6 },
+        marker: { size: [2, 6], color: vecColor },
+        text: ['', `x (${x[0]}, ${x[1]}, ${x[2]})`],
+        name: inKernel ? 'Вектор x ∈ Ker(T)' : 'Вектор x'
+    });
+
+    Plotly.react(domainContainer, domainTraces, layout3DBase, { responsive: true, displayModeBar: false });
+
+    // 2. ПРОСТРАНСТВО ОБРАЗОВ W: ℝ³
+    const codomainTraces = [];
+
+    if (rank === 0) {
+        codomainTraces.push({
+            type: 'scatter3d',
+            x: [0], y: [0], z: [0],
+            mode: 'markers',
+            marker: { size: 6, color: '#5f7a4e' },
+            name: 'Im(T) = {0}'
+        });
+    } else if (rank === 1) {
+        const b1 = imageBasis[0];
+        const span = 8;
+        codomainTraces.push({
+            type: 'scatter3d',
+            x: [-span * b1[0], span * b1[0]],
+            y: [-span * b1[1], span * b1[1]],
+            z: [-span * b1[2], span * b1[2]],
+            mode: 'lines',
+            line: { color: '#5f7a4e', width: 5, dash: 'dash' },
+            name: 'Образ Im(T)'
+        });
+        codomainTraces.push({
+            type: 'scatter3d',
+            x: [0, b1[0]], y: [0, b1[1]], z: [0, b1[2]],
+            mode: 'lines+markers+text',
+            line: { color: '#435a34', width: 6 },
+            marker: { size: [2, 5], color: '#435a34' },
+            text: ['', `b₁ (${b1[0]}, ${b1[1]}, ${b1[2]})`],
+            name: 'Базис Im b₁'
+        });
+    } else if (rank === 2) {
+        const b1 = imageBasis[0];
+        const b2 = imageBasis[1];
+        const s = 3.5;
+        const p00 = [-s * b1[0] - s * b2[0], -s * b1[1] - s * b2[1], -s * b1[2] - s * b2[2]];
+        const p10 = [ s * b1[0] - s * b2[0],  s * b1[1] - s * b2[1],  s * b1[2] - s * b2[2]];
+        const p11 = [ s * b1[0] + s * b2[0],  s * b1[1] + s * b2[1],  s * b1[2] + s * b2[2]];
+        const p01 = [-s * b1[0] + s * b2[0], -s * b1[1] + s * b2[1], -s * b1[2] + s * b2[2]];
+
+        codomainTraces.push({
+            type: 'mesh3d',
+            x: [p00[0], p10[0], p11[0], p01[0]],
+            y: [p00[1], p10[1], p11[1], p01[1]],
+            z: [p00[2], p10[2], p11[2], p01[2]],
+            i: [0, 0], j: [1, 2], k: [2, 3],
+            opacity: 0.35,
+            color: '#8fa892',
+            name: 'Образ Im(T) (плоскость)'
+        });
+        codomainTraces.push({
+            type: 'scatter3d',
+            x: [0, b1[0]], y: [0, b1[1]], z: [0, b1[2]],
+            mode: 'lines+markers',
+            line: { color: '#435a34', width: 6 },
+            marker: { size: 5, color: '#435a34' },
+            name: 'Базис Im b₁'
+        });
+        codomainTraces.push({
+            type: 'scatter3d',
+            x: [0, b2[0]], y: [0, b2[1]], z: [0, b2[2]],
+            mode: 'lines+markers',
+            line: { color: '#5f7a4e', width: 6 },
+            marker: { size: 5, color: '#5f7a4e' },
+            name: 'Базис Im b₂'
+        });
+    } else if (rank === 3) {
+        for (let i = 0; i < 3; i++) {
+            const bi = imageBasis[i];
+            codomainTraces.push({
+                type: 'scatter3d',
+                x: [0, bi[0]], y: [0, bi[1]], z: [0, bi[2]],
+                mode: 'lines+markers',
+                line: { color: '#5f7a4e', width: 5 },
+                marker: { size: 5, color: '#5f7a4e' },
+                name: `Базис Im b_${i+1}`
+            });
+        }
+    }
+
+    // Образ тестового вектора T(x)
+    if (inKernel) {
+        codomainTraces.push({
+            type: 'scatter3d',
+            x: [0], y: [0], z: [0],
+            mode: 'markers+text',
+            marker: { size: 8, color: '#b34a3b' },
+            text: ['  T(x) = 0'],
+            textposition: 'bottom center',
+            textfont: { color: '#b34a3b', size: 12 },
+            name: 'T(x) = 0 (в ядре)'
+        });
+    } else {
+        codomainTraces.push({
+            type: 'scatter3d',
+            x: [0, Tx[0]], y: [0, Tx[1]], z: [0, Tx[2]],
+            mode: 'lines+markers+text',
+            line: { color: '#b34a3b', width: 6 },
+            marker: { size: [2, 6], color: '#b34a3b' },
+            text: ['', `T(x) (${Tx[0].toFixed(1)}, ${Tx[1].toFixed(1)}, ${Tx[2].toFixed(1)})`],
+            name: `T(x) = (${Tx[0].toFixed(1)}, ${Tx[1].toFixed(1)}, ${Tx[2].toFixed(1)})`
+        });
+    }
+
+    Plotly.react(codomainContainer, codomainTraces, layout3DBase, { responsive: true, displayModeBar: false });
+}
+
+// -------------------------------------------------------------------------
+// АНАЛИТИЧЕСКАЯ КАРТОЧКА С РАЗБОРОМ И ТЕОРЕМОЙ О РАНГЕ И ДЕФЕКТЕ
+// -------------------------------------------------------------------------
+function renderKernelImageAnalysis(M, x, Tx, inKernel, rank, nullity, imageBasis, kernelBasis) {
+    const cardEl = document.getElementById('kernel-image-analysis');
+    if (!cardEl) return;
+
+    const n = currentKerImgDim;
+
+    // Вспомогательное форматирование чисел
+    const fmtNum = (val) => (val % 1 === 0 ? val.toFixed(0) : val.toFixed(2));
+
+    // Форматирование вектора-столбца в LaTeX (в JS: \\begin, \\\\ для переноса строк, \\end)
+    const formatVecTex = (v) => '\\begin{pmatrix} ' + v.map(fmtNum).join(' \\\\ ') + ' \\end{pmatrix}';
+
+    // Форматирование матрицы T в LaTeX
+    let matrixTex = '\\begin{pmatrix} ';
+    for (let r = 0; r < n; r++) {
+        matrixTex += M[r].map(fmtNum).join(' & ');
+        if (r < n - 1) matrixTex += ' \\\\ ';
+    }
+    matrixTex += ' \\end{pmatrix}';
+
+    // Форматирование векторов x и T(x)
+    const xTex = formatVecTex(x);
+    const txTex = formatVecTex(Tx);
+
+    // Базис ядра в LaTeX
+    let kerBasisTex = '';
+    if (nullity === 0) {
+        kerBasisTex = '\\operatorname{Ker}(T) = \\{\\mathbf{0}\\}, \\quad \\dim = 0';
+    } else {
+        const vectorsTex = kernelBasis.map(formatVecTex).join(',\\; ');
+        kerBasisTex = `\\operatorname{Ker}(T) = \\operatorname{Span}\\left(${vectorsTex}\\right), \\quad \\dim = ${nullity}`;
+    }
+
+    // Базис образа в LaTeX
+    let imgBasisTex = '';
+    if (rank === 0) {
+        imgBasisTex = '\\operatorname{Im}(T) = \\{\\mathbf{0}\\}, \\quad \\dim = 0';
+    } else {
+        const vectorsTex = imageBasis.map(formatVecTex).join(',\\; ');
+        imgBasisTex = `\\operatorname{Im}(T) = \\operatorname{Span}\\left(${vectorsTex}\\right), \\quad \\dim = ${rank}`;
+    }
+
+    const verdictHtml = inKernel
+        ? `<div style="background:var(--bg-controls); border-left:3px solid var(--success); padding:0.65rem 0.85rem; border-radius:4px; margin-top:0.7rem; border:1px solid var(--border-color); border-left-width:3px;">
+            <div style="color:var(--success); font-weight:600; font-size:0.88rem;">Вектор $x$ принадлежит ядру ($x \\in \\operatorname{Ker}(T)$)</div>
+            <div style="font-size:0.84rem; line-height:1.5; margin-top:0.25rem; color:var(--text-secondary);">
+                Образ нулевой: $T(x) = \\mathbf{0}$. Направление схлопывается в нуль, информация полностью теряется.
+            </div>
+           </div>`
+        : `<div style="background:var(--bg-controls); border-left:3px solid var(--primary); padding:0.65rem 0.85rem; border-radius:4px; margin-top:0.7rem; border:1px solid var(--border-color); border-left-width:3px;">
+            <div style="color:var(--primary); font-weight:600; font-size:0.88rem;">Вектор $x$ не принадлежит ядру ($x \\notin \\operatorname{Ker}(T)$)</div>
+            <div style="font-size:0.84rem; line-height:1.5; margin-top:0.25rem; color:var(--text-secondary);">
+                Образ ненулевой: $T(x) \\ne \\mathbf{0}$. Вектор отображается в подпространство образов $T(x) \\in \\operatorname{Im}(T)$.
+            </div>
+           </div>`;
+
+    cardEl.innerHTML = `
+        <div class="callout-title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem; margin-bottom:0.9rem;">
+            <span>Аналитический отчёт: базисы подпространств и теорема о ранге и дефекте</span>
+            <span class="badge">Теорема подтверждена</span>
+        </div>
+
+        <!-- Полоса теоремы о ранге и дефекте -->
+        <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:8px; padding:0.85rem 1.2rem; margin-bottom:1.2rem; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem;">
+            <div>
+                <div style="font-weight:700; color:var(--primary); font-size:0.95rem; margin-bottom:0.2rem;">
+                    Теорема о ранге и дефекте (Rank-Nullity Theorem):
+                </div>
+                <div style="font-size:0.88rem; color:var(--text-muted);">
+                    Размерность пространства прообразов $\\dim(V)$ равна сумме ранга и дефекта: $\\dim(V) = \\operatorname{rank}(T) + \\operatorname{nullity}(T)$
+                </div>
+            </div>
+            <div style="font-size:1.05rem; font-weight:700; color:var(--text-main); background:var(--bg-controls); padding:0.45rem 1rem; border-radius:6px; border:1px solid var(--border-color); white-space:nowrap;">
+                $\\dim(V) = ${n} \\iff \\operatorname{rank}(T) + \\operatorname{nullity}(T) = ${rank} + ${nullity} = ${rank + nullity}$
+            </div>
+        </div>
+
+        <!-- 3 аналитические карточки -->
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:1.2rem; align-items:start;">
+            <!-- Колонка 1: Матрица T -->
+            <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:8px; padding:1rem;">
+                <div style="font-weight:700; font-size:0.92rem; margin-bottom:0.5rem; color:var(--text-main);">
+                    1. Матрица оператора $T$:
+                </div>
+                <div style="text-align:center; padding:0.3rem 0;">
+                    $$T = ${matrixTex}$$
+                </div>
+                <div style="font-size:0.86rem; color:var(--text-muted); line-height:1.55; margin-top:0.5rem; border-top:1px dashed var(--border-color); padding-top:0.5rem;">
+                    • Пространство: $\\mathbb{R}^{${n}} \\to \\mathbb{R}^{${n}}$<br>
+                    • Ранг оператора: $\\operatorname{rank}(T) = \\mathbf{${rank}}$<br>
+                    • Дефект ядра: $\\operatorname{nullity}(T) = \\mathbf{${nullity}}$
+                </div>
+            </div>
+
+            <!-- Колонка 2: Базисы Ker и Im -->
+            <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:8px; padding:1rem;">
+                <div style="font-weight:700; font-size:0.92rem; margin-bottom:0.5rem; color:var(--text-main);">
+                    2. Базисы подпространств:
+                </div>
+                <div style="margin-bottom:0.7rem;">
+                    <div style="font-size:0.86rem; font-weight:600; color:var(--primary); margin-bottom:0.2rem;">
+                        Ядро $\\operatorname{Ker}(T)$ (Nullspace, $\\dim = ${nullity}$):
+                    </div>
+                    <div style="text-align:center; font-size:0.9rem;">
+                        $$${kerBasisTex}$$
+                    </div>
+                </div>
+                <div style="border-top:1px dashed var(--border-color); padding-top:0.6rem;">
+                    <div style="font-size:0.86rem; font-weight:600; color:var(--success); margin-bottom:0.2rem;">
+                        Образ $\\operatorname{Im}(T)$ (Column Space, $\\dim = ${rank}$):
+                    </div>
+                    <div style="text-align:center; font-size:0.9rem;">
+                        $$${imgBasisTex}$$
+                    </div>
+                </div>
+            </div>
+
+            <!-- Колонка 3: Действие на вектор x -->
+            <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:8px; padding:1rem;">
+                <div style="font-weight:700; font-size:0.92rem; margin-bottom:0.5rem; color:var(--text-main);">
+                    3. Действие на тестовый вектор:
+                </div>
+                <div style="text-align:center; padding:0.3rem 0;">
+                    $$x = ${xTex} \\implies T(x) = ${txTex}$$
+                </div>
+                ${verdictHtml}
+            </div>
+        </div>
+    `;
+
+    safeRenderMath(cardEl);
+}
+
 // -------------------------------------------------------------------------
 // [2.6] 3D-Стенд: Пошаговый процесс Грама-Шмидта (Шаги 0–4)
 // -------------------------------------------------------------------------
@@ -4627,6 +5564,8 @@ const TTSController = {
 
         // Привязываем события ко всем плеерам в DOM
         document.querySelectorAll('.tts-player').forEach(player => {
+            if (player.dataset.ttsBound === 'true') return;
+            player.dataset.ttsBound = 'true';
             const secId = player.getAttribute('data-section');
             const playBtn = player.querySelector('.btn-tts-play');
             const stopBtn = player.querySelector('.btn-tts-stop');
@@ -4733,14 +5672,14 @@ const TTSController = {
     getReadableBlocks(section) {
         if (!section) return [];
         const blocks = [];
-        const candidates = section.querySelectorAll('p:not(.section-subtitle), .callout, ul, ol');
+        const candidates = section.querySelectorAll('p:not(.section-subtitle), .callout, .lecture-para-card, .formula-card, ul, ol');
 
         candidates.forEach(el => {
             if (el.closest('.tts-player') || el.closest('.interactive-card') || el.closest('.nav-pills') || el.closest('.tab-header')) {
                 return;
             }
-            if (el.tagName === 'P' && el.closest('.callout')) return;
-            if ((el.tagName === 'UL' || el.tagName === 'OL') && el.closest('.callout')) return;
+            if (el.tagName === 'P' && (el.closest('.callout') || el.closest('.lecture-para-card') || el.closest('.formula-card'))) return;
+            if ((el.tagName === 'UL' || el.tagName === 'OL') && (el.closest('.callout') || el.closest('.lecture-para-card'))) return;
 
             const text = cleanElementTextForTTS(el);
             if (text && text.length > 5) {
@@ -4915,3 +5854,802 @@ const TTSController = {
 };
 
 window.TTSController = TTSController;
+
+
+// =========================================================================
+// [3.5] ДИНАМИЧЕСКИЙ КОНВЕРТЕР УЧЕБНЫХ МАТЕРИАЛОВ (DOCX PROCESSOR)
+// =========================================================================
+
+const DocxProcessor = {
+    selectedFile: null,
+
+    init() {
+        this.modal = document.getElementById('modal-doc-importer');
+        this.btnOpen = document.getElementById('btn-open-doc-importer');
+        this.btnClose = document.getElementById('btn-close-doc-importer');
+        this.btnCancel = document.getElementById('btn-cancel-docx-import');
+        this.btnProcess = document.getElementById('btn-process-docx');
+        this.btnClear = document.getElementById('btn-clear-custom-modules');
+        this.dropzone = document.getElementById('docx-dropzone');
+        this.fileInput = document.getElementById('docx-file-input');
+        this.fileNameEl = document.getElementById('docx-file-name');
+        this.modNumInput = document.getElementById('import-mod-num');
+        this.modTitleInput = document.getElementById('import-mod-title');
+        this.progressContainer = document.getElementById('docx-import-progress');
+        this.progressBar = document.getElementById('docx-progress-bar');
+        this.statusText = document.getElementById('docx-status-text');
+        this.feedbackBox = document.getElementById('docx-feedback-box');
+
+        if (!this.modal || !this.btnOpen) {
+            console.warn('[DocxProcessor] Элементы интерфейса конвертера не найдены в DOM');
+            return;
+        }
+
+        // Открытие модального окна
+        this.btnOpen.addEventListener('click', () => this.openModal());
+
+        // Закрытие модального окна
+        const closeModal = () => this.closeModal();
+        this.btnClose?.addEventListener('click', closeModal);
+        this.btnCancel?.addEventListener('click', closeModal);
+
+        const backdrop = this.modal.querySelector('.doc-modal-backdrop');
+        backdrop?.addEventListener('click', closeModal);
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && this.modal.style.display !== 'none') {
+                this.closeModal();
+            }
+        });
+
+        // Drag & Drop и выбор файла
+        if (this.dropzone && this.fileInput) {
+            this.dropzone.addEventListener('click', (e) => {
+                if (e.target.closest('input')) return;
+                this.fileInput.click();
+            });
+
+            this.fileInput.addEventListener('change', (e) => {
+                if (e.target.files && e.target.files[0]) {
+                    this.selectFile(e.target.files[0]);
+                }
+            });
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                this.dropzone.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.dropzone.classList.add('dragover');
+                });
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                this.dropzone.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.dropzone.classList.remove('dragover');
+                });
+            });
+
+            this.dropzone.addEventListener('drop', (e) => {
+                const dt = e.dataTransfer;
+                if (dt && dt.files && dt.files[0]) {
+                    this.selectFile(dt.files[0]);
+                }
+            });
+        }
+
+        // Кнопка запуска обработки
+        this.btnProcess?.addEventListener('click', () => this.processSelectedFile());
+
+        // Кнопка сброса импортированных модулей
+        this.btnClear?.addEventListener('click', () => this.clearCustomModules());
+
+        // Восстановление ранее сохранённых модулей из localStorage
+        this.restoreFromStorage();
+    },
+
+    openModal() {
+        this.selectedFile = null;
+        if (this.fileInput) this.fileInput.value = '';
+        if (this.fileNameEl) {
+            this.fileNameEl.style.display = 'none';
+            this.fileNameEl.textContent = '';
+        }
+        if (this.btnProcess) this.btnProcess.disabled = true;
+        if (this.progressContainer) this.progressContainer.style.display = 'none';
+        if (this.progressBar) this.progressBar.style.width = '0%';
+        if (this.feedbackBox) {
+            this.feedbackBox.style.display = 'none';
+            this.feedbackBox.innerHTML = '';
+        }
+
+        // Автоопределение номера следующего модуля
+        let nextMod = 4;
+        document.querySelectorAll('.btn-module-tab').forEach(t => {
+            const num = parseInt(t.getAttribute('data-module'), 10);
+            if (!isNaN(num) && num >= nextMod) nextMod = num + 1;
+        });
+        if (this.modNumInput) this.modNumInput.value = nextMod;
+        if (this.modTitleInput) this.modTitleInput.value = '';
+
+        this.modal.style.display = 'flex';
+    },
+
+    closeModal() {
+        if (this.modal) this.modal.style.display = 'none';
+    },
+
+    selectFile(file) {
+        if (!file.name.toLowerCase().endsWith('.docx')) {
+            this.showFeedback('error', 'Пожалуйста, выберите файл в формате Word (.docx)');
+            if (this.btnProcess) this.btnProcess.disabled = true;
+            return;
+        }
+
+        this.selectedFile = file;
+        if (this.fileNameEl) {
+            this.fileNameEl.style.display = 'inline-block';
+            this.fileNameEl.textContent = `📄 ${file.name} (${(file.size / 1024).toFixed(1)} КБ)`;
+        }
+        if (this.btnProcess) this.btnProcess.disabled = false;
+        if (this.feedbackBox) this.feedbackBox.style.display = 'none';
+
+        // Автозаполнение номера и названия модуля из имени файла
+        const matchNum = file.name.match(/(?:лек|модуль|lecture|module|lec)[_-\s]?(\d+)/i) || file.name.match(/(\d+)/);
+        if (matchNum && this.modNumInput) {
+            this.modNumInput.value = matchNum[1];
+        }
+
+        let cleanName = file.name.replace(/\.docx$/i, '').replace(/[_-]/g, ' ').trim();
+        cleanName = cleanName.replace(/^(?:Лекция|Модуль|Lecture|Module|лек|lec)\s*\d+[\s.:-]*/i, '').trim();
+        if (cleanName && cleanName.length > 2 && this.modTitleInput && !this.modTitleInput.value) {
+            this.modTitleInput.value = cleanName;
+        }
+    },
+
+    updateProgress(percent, statusMsg) {
+        if (this.progressContainer) this.progressContainer.style.display = 'block';
+        if (this.progressBar) this.progressBar.style.width = `${percent}%`;
+        if (this.statusText) this.statusText.textContent = statusMsg;
+    },
+
+    showFeedback(type, message) {
+        if (!this.feedbackBox) return;
+        this.feedbackBox.style.display = 'block';
+        const isErr = type === 'error';
+        this.feedbackBox.innerHTML = `
+            <div style="background:${isErr ? '#fdf2f2' : '#f0fdf4'}; border:1px solid ${isErr ? '#fca5a5' : '#86efac'}; color:${isErr ? '#991b1b' : '#166534'}; padding:0.8rem 1rem; border-radius:8px; font-size:0.9rem; line-height:1.5;">
+                ${isErr ? '❌ ' : '✅ '} ${message}
+            </div>
+        `;
+    },
+
+    ommlToLatex(node) {
+        if (!node) return '';
+        const tag = node.localName || node.nodeName.split(':').pop();
+
+        if (tag === 't') {
+            let txt = node.textContent || '';
+            txt = txt.replace(/→/g, '\\to ')
+                     .replace(/←/g, '\\gets ')
+                     .replace(/↔/g, '\\leftrightarrow ')
+                     .replace(/⇒/g, '\\implies ')
+                     .replace(/⇔/g, '\\iff ')
+                     .replace(/≤/g, '\\le ')
+                     .replace(/≥/g, '\\ge ')
+                     .replace(/≠/g, '\\neq ')
+                     .replace(/≈/g, '\\approx ')
+                     .replace(/±/g, '\\pm ')
+                     .replace(/∓/g, '\\mp ')
+                     .replace(/×/g, '\\times ')
+                     .replace(/·/g, '\\cdot ')
+                     .replace(/∈/g, '\\in ')
+                     .replace(/∉/g, '\\notin ')
+                     .replace(/⊂/g, '\\subset ')
+                     .replace(/⊆/g, '\\subseteq ')
+                     .replace(/∪/g, '\\cup ')
+                     .replace(/∩/g, '\\cap ')
+                     .replace(/∀/g, '\\forall ')
+                     .replace(/∃/g, '\\exists ')
+                     .replace(/∞/g, '\\infty ')
+                     .replace(/∇/g, '\\nabla ');
+            return txt;
+        }
+
+        if (tag === 'r') {
+            const textNodes = Array.from(node.childNodes).filter(c => !c.nodeName.endsWith('Pr'));
+            return textNodes.map(c => this.ommlToLatex(c)).join('');
+        }
+
+        if (tag === 'f') { // Дробь \frac{num}{den}
+            const num = Array.from(node.childNodes).find(c => (c.localName || c.nodeName.split(':').pop()) === 'num');
+            const den = Array.from(node.childNodes).find(c => (c.localName || c.nodeName.split(':').pop()) === 'den');
+            return `\\frac{${this.ommlToLatex(num)}}{${this.ommlToLatex(den)}}`;
+        }
+
+        if (tag === 'sSup') { // Верхний индекс
+            const e = Array.from(node.childNodes).find(c => (c.localName || c.nodeName.split(':').pop()) === 'e');
+            const sup = Array.from(node.childNodes).find(c => (c.localName || c.nodeName.split(':').pop()) === 'sup');
+            return `{${this.ommlToLatex(e)}}^{${this.ommlToLatex(sup)}}`;
+        }
+
+        if (tag === 'sSub') { // Нижний индекс
+            const e = Array.from(node.childNodes).find(c => (c.localName || c.nodeName.split(':').pop()) === 'e');
+            const sub = Array.from(node.childNodes).find(c => (c.localName || c.nodeName.split(':').pop()) === 'sub');
+            return `{${this.ommlToLatex(e)}}_{${this.ommlToLatex(sub)}}`;
+        }
+
+        if (tag === 'sSubSup') { // Одновременно нижний и верхний индекс
+            const e = Array.from(node.childNodes).find(c => (c.localName || c.nodeName.split(':').pop()) === 'e');
+            const sub = Array.from(node.childNodes).find(c => (c.localName || c.nodeName.split(':').pop()) === 'sub');
+            const sup = Array.from(node.childNodes).find(c => (c.localName || c.nodeName.split(':').pop()) === 'sup');
+            return `{${this.ommlToLatex(e)}}_{${this.ommlToLatex(sub)}}^{${this.ommlToLatex(sup)}}`;
+        }
+
+        if (tag === 'rad') { // Корень \sqrt или \sqrt[n]
+            const e = Array.from(node.childNodes).find(c => (c.localName || c.nodeName.split(':').pop()) === 'e');
+            const deg = Array.from(node.childNodes).find(c => (c.localName || c.nodeName.split(':').pop()) === 'deg');
+            const degHide = node.querySelector && (node.querySelector('degHide') || node.getElementsByTagNameNS('*', 'degHide')[0]);
+            if (deg && (!degHide || degHide.getAttribute('m:val') !== '1')) {
+                const degText = this.ommlToLatex(deg).trim();
+                if (degText) return `\\sqrt[${degText}]{${this.ommlToLatex(e)}}`;
+            }
+            return `\\sqrt{${this.ommlToLatex(e)}}`;
+        }
+
+        if (tag === 'd') { // Скобки и разделители
+            let beg = '(', end = ')';
+            const dPr = Array.from(node.childNodes).find(c => (c.localName || c.nodeName.split(':').pop()) === 'dPr');
+            if (dPr) {
+                const begEl = Array.from(dPr.childNodes).find(c => (c.localName || c.nodeName.split(':').pop()) === 'begChr');
+                const endEl = Array.from(dPr.childNodes).find(c => (c.localName || c.nodeName.split(':').pop()) === 'endChr');
+                if (begEl) beg = begEl.getAttribute('m:val') || begEl.getAttribute('val') || beg;
+                if (endEl) end = endEl.getAttribute('m:val') || endEl.getAttribute('val') || end;
+            }
+            const eList = Array.from(node.childNodes).filter(c => (c.localName || c.nodeName.split(':').pop()) === 'e');
+            const inner = eList.map(e => this.ommlToLatex(e)).join('');
+            if (beg === '|' && end === '|') return `|${inner}|`;
+            if (beg === '‖' && end === '‖') return `\\|${inner}\\|`;
+            if (beg === '[' && end === ']') return `[${inner}]`;
+            if (beg === '{' && end === '}') return `\\{${inner}\\}`;
+            return `(${inner})`;
+        }
+
+        if (tag === 'limLow') { // Пределы \lim_{x \to a}
+            const e = Array.from(node.childNodes).find(c => (c.localName || c.nodeName.split(':').pop()) === 'e');
+            const lim = Array.from(node.childNodes).find(c => (c.localName || c.nodeName.split(':').pop()) === 'lim');
+            return `\\lim_{${this.ommlToLatex(lim)}} ${this.ommlToLatex(e)}`;
+        }
+
+        if (tag === 'limUpp') {
+            const e = Array.from(node.childNodes).find(c => (c.localName || c.nodeName.split(':').pop()) === 'e');
+            const lim = Array.from(node.childNodes).find(c => (c.localName || c.nodeName.split(':').pop()) === 'lim');
+            return `\\max_{${this.ommlToLatex(lim)}} ${this.ommlToLatex(e)}`;
+        }
+
+        if (tag === 'nary') { // Суммы, интегралы, произведения
+            let op = '\\sum';
+            const naryPr = Array.from(node.childNodes).find(c => (c.localName || c.nodeName.split(':').pop()) === 'naryPr');
+            if (naryPr) {
+                const chrEl = Array.from(naryPr.childNodes).find(c => (c.localName || c.nodeName.split(':').pop()) === 'chr');
+                const cVal = chrEl ? (chrEl.getAttribute('m:val') || chrEl.getAttribute('val') || '') : '';
+                if (cVal === '∫') op = '\\int';
+                else if (cVal === '∬') op = '\\iint';
+                else if (cVal === '∭') op = '\\iiint';
+                else if (cVal === '∮') op = '\\oint';
+                else if (cVal === '∏') op = '\\prod';
+                else if (cVal === '⋃') op = '\\bigcup';
+                else if (cVal === '⋂') op = '\\bigcap';
+                else if (cVal) op = cVal;
+            }
+            const sub = Array.from(node.childNodes).find(c => (c.localName || c.nodeName.split(':').pop()) === 'sub');
+            const sup = Array.from(node.childNodes).find(c => (c.localName || c.nodeName.split(':').pop()) === 'sup');
+            const e = Array.from(node.childNodes).find(c => (c.localName || c.nodeName.split(':').pop()) === 'e');
+
+            let res = op;
+            if (sub) {
+                const subTxt = this.ommlToLatex(sub).trim();
+                if (subTxt) res += `_{${subTxt}}`;
+            }
+            if (sup) {
+                const supTxt = this.ommlToLatex(sup).trim();
+                if (supTxt) res += `^{${supTxt}}`;
+            }
+            res += ` ${this.ommlToLatex(e)}`;
+            return res;
+        }
+
+        if (tag === 'acc') { // Диакритика (черта, крышка, вектор, точка)
+            let accCmd = '\\bar';
+            const accPr = Array.from(node.childNodes).find(c => (c.localName || c.nodeName.split(':').pop()) === 'accPr');
+            if (accPr) {
+                const chrEl = Array.from(accPr.childNodes).find(c => (c.localName || c.nodeName.split(':').pop()) === 'chr');
+                const cVal = chrEl ? (chrEl.getAttribute('m:val') || chrEl.getAttribute('val') || '') : '';
+                if (cVal === '^' || cVal === '̂') accCmd = '\\hat';
+                else if (cVal === '→' || cVal === '⃗') accCmd = '\\vec';
+                else if (cVal === '.' || cVal === '̇') accCmd = '\\dot';
+                else if (cVal === '..' || cVal === '̈') accCmd = '\\ddot';
+                else if (cVal === '~' || cVal === '̃') accCmd = '\\tilde';
+            }
+            const e = Array.from(node.childNodes).find(c => (c.localName || c.nodeName.split(':').pop()) === 'e');
+            return `${accCmd}{${this.ommlToLatex(e)}}`;
+        }
+
+        if (tag === 'bar') {
+            const e = Array.from(node.childNodes).find(c => (c.localName || c.nodeName.split(':').pop()) === 'e');
+            return `\\overline{${this.ommlToLatex(e)}}`;
+        }
+
+        if (tag === 'm') { // Матрица
+            const rows = Array.from(node.childNodes).filter(c => (c.localName || c.nodeName.split(':').pop()) === 'mr');
+            const rowsLatex = rows.map(r => {
+                const cells = Array.from(r.childNodes).filter(c => (c.localName || c.nodeName.split(':').pop()) === 'e');
+                return cells.map(cell => this.ommlToLatex(cell).trim()).join(' & ');
+            }).join(' \\\\ ');
+            return `\\begin{pmatrix} ${rowsLatex} \\end{pmatrix}`;
+        }
+
+        const nonPrChildren = Array.from(node.childNodes).filter(c => !c.nodeName.endsWith('Pr'));
+        return nonPrChildren.map(c => this.ommlToLatex(c)).join('');
+    },
+
+    async preprocessDocxWithJSZip(arrayBuffer) {
+        if (!window.JSZip) {
+            console.warn('[DocxProcessor] JSZip не найден на странице, пропуск извлечения формул OMML');
+            return arrayBuffer;
+        }
+
+        try {
+            const zip = await window.JSZip.loadAsync(arrayBuffer);
+            const docFile = zip.file('word/document.xml');
+            if (!docFile) return arrayBuffer;
+
+            const xmlStr = await docFile.async('string');
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(xmlStr, 'application/xml');
+
+            if (xmlDoc.querySelector('parsererror')) {
+                console.warn('[DocxProcessor] Ошибка XML в document.xml');
+                return arrayBuffer;
+            }
+
+            // Выносные блочные формулы (oMathPara) -> $$...$$
+            const oMathParas = Array.from(xmlDoc.getElementsByTagNameNS('*', 'oMathPara'));
+            for (const para of oMathParas) {
+                const oMaths = Array.from(para.getElementsByTagNameNS('*', 'oMath'));
+                const latexInner = oMaths.map(om => this.ommlToLatex(om)).join(' ').trim();
+                if (latexInner) {
+                    const wRun = xmlDoc.createElementNS('http://schemas.openxmlformats.org/wordprocessingml/2006/main', 'w:r');
+                    const wText = xmlDoc.createElementNS('http://schemas.openxmlformats.org/wordprocessingml/2006/main', 'w:t');
+                    wText.setAttribute('xml:space', 'preserve');
+                    wText.textContent = ` $$${latexInner}$$ `;
+                    wRun.appendChild(wText);
+                    para.parentNode.replaceChild(wRun, para);
+                }
+            }
+
+            // Внутристрочные формулы (oMath) -> $...$ или обычный текст для одиночных букв
+            const oMaths = Array.from(xmlDoc.getElementsByTagNameNS('*', 'oMath'));
+            for (const om of oMaths) {
+                const latex = this.ommlToLatex(om).trim();
+                if (latex) {
+                    const wRun = xmlDoc.createElementNS('http://schemas.openxmlformats.org/wordprocessingml/2006/main', 'w:r');
+                    const wText = xmlDoc.createElementNS('http://schemas.openxmlformats.org/wordprocessingml/2006/main', 'w:t');
+                    wText.setAttribute('xml:space', 'preserve');
+
+                    // Отдельные одиночные переменные (f, x, y, a, b, c, t, h и т.д.) оставляем обычным текстом
+                    if (/^[a-zA-Z]$/.test(latex)) {
+                        wText.textContent = latex;
+                    } else {
+                        wText.textContent = `$${latex}$`;
+                    }
+                    wRun.appendChild(wText);
+                    om.parentNode.replaceChild(wRun, om);
+                }
+            }
+
+            const serializer = new XMLSerializer();
+            const newXmlStr = serializer.serializeToString(xmlDoc);
+            zip.file('word/document.xml', newXmlStr);
+
+            return await zip.generateAsync({ type: 'arraybuffer' });
+        } catch (err) {
+            console.warn('[DocxProcessor] Предобработка JSZip завершилась с ошибкой:', err);
+            return arrayBuffer;
+        }
+    },
+
+    async processSelectedFile() {
+        if (!this.selectedFile) return;
+
+        try {
+            if (this.btnProcess) this.btnProcess.disabled = true;
+            this.updateProgress(15, 'Чтение файла документа (.docx)...');
+
+            const rawBuffer = await this.selectedFile.arrayBuffer();
+
+            this.updateProgress(35, 'Распаковка и трансляция формул (JSZip + OMML)...');
+            const processedBuffer = await this.preprocessDocxWithJSZip(rawBuffer);
+
+            this.updateProgress(60, 'Преобразование структуры в HTML (Mammoth.js)...');
+            if (!window.mammoth) {
+                throw new Error('Библиотека Mammoth.js не найдена на странице.');
+            }
+            const mammothRes = await window.mammoth.convertToHtml({ arrayBuffer: processedBuffer });
+            const htmlStr = mammothRes.value || '';
+
+            this.updateProgress(80, 'Выделение разделов, определений и теорем...');
+            const modNum = parseInt(this.modNumInput?.value || 4, 10);
+            const userTitle = this.modTitleInput?.value?.trim() || '';
+
+            const parsedModule = this.parseSections(htmlStr, modNum, userTitle);
+
+            this.updateProgress(95, 'Интеграция аудио-плееров TTS и KaTeX формул...');
+            this.renderModule(parsedModule);
+
+            this.saveModuleToStorage(parsedModule);
+
+            this.updateProgress(100, 'Готово! Модуль успешно сформирован.');
+            this.showFeedback('success', `Модуль ${modNum} «${parsedModule.modTitle}» успешно импортирован (${parsedModule.sections.length} разделов).`);
+
+            setTimeout(() => {
+                this.closeModal();
+                switchModule(modNum);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }, 800);
+
+        } catch (error) {
+            console.error('[DocxProcessor] Ошибка импорта лекции:', error);
+            this.showFeedback('error', `Ошибка при обработке файла: ${error.message}`);
+            if (this.btnProcess) this.btnProcess.disabled = false;
+        }
+    },
+
+    parseSections(htmlStr, modNum, userTitle) {
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = htmlStr;
+
+        let detectedModTitle = userTitle || '';
+        let detectedLecTitle = '';
+
+        const elements = Array.from(tempDiv.children);
+        const sections = [];
+        let currentSec = null;
+
+        for (let el of elements) {
+            const text = el.textContent.trim();
+            if (!text) continue;
+
+            const modMatch = text.match(/^(?:Модуль|Module)\s*\d+[\s.:-]+(.+)$/i);
+            if (modMatch && !detectedModTitle) {
+                detectedModTitle = modMatch[1].trim();
+                continue;
+            }
+
+            const lecMatch = text.match(/^(?:Лекция|Lecture)\s*\d+[\s.:-]+(.+)$/i);
+            if (lecMatch && !detectedLecTitle) {
+                detectedLecTitle = lecMatch[1].trim();
+                if (!detectedModTitle) detectedModTitle = detectedLecTitle;
+                continue;
+            }
+
+            const isHeadingTag = /^(H1|H2|H3|H4)$/i.test(el.tagName);
+            const numMatch = text.match(/^(\d+\.\d+)\.?\s*(.+)$/);
+
+            if (numMatch || (isHeadingTag && text.length < 130)) {
+                const secNum = numMatch ? numMatch[1] : `${modNum}.${sections.length + 1}`;
+                const fullTitle = numMatch ? numMatch[2].trim() : text;
+
+                let title = fullTitle;
+                let subtitle = '';
+                const splitMatch = fullTitle.match(/^([^:–—]+)[:–—]\s*(.+)$/);
+                if (splitMatch) {
+                    title = splitMatch[1].trim();
+                    subtitle = splitMatch[2].trim();
+                }
+
+                currentSec = {
+                    num: secNum,
+                    title: `${secNum} ${title}`,
+                    subtitle: subtitle || 'Теоретический материал и математические выкладки',
+                    elements: []
+                };
+                sections.push(currentSec);
+                continue;
+            }
+
+            if (currentSec) {
+                currentSec.elements.push(el);
+            } else {
+                if (!sections.length) {
+                    currentSec = {
+                        num: `${modNum}.0`,
+                        title: `Обзор модуля ${modNum}`,
+                        subtitle: detectedModTitle || 'Введение в тему лекции',
+                        elements: []
+                    };
+                    sections.push(currentSec);
+                }
+                currentSec.elements.push(el);
+            }
+        }
+
+        if (!detectedModTitle) {
+            detectedModTitle = `Модуль ${modNum}`;
+        }
+
+        // Преобразование элементов в callout-блоки PRIKLAD
+        sections.forEach(sec => {
+            let bodyHtml = '';
+            sec.elements.forEach(el => {
+                const txt = el.textContent.trim();
+                const inner = el.innerHTML;
+
+                // Проверка: выносная формула ($$...$$)
+                const isDisplayFormula = /^\s*\$\$[\s\S]+\$\$\s*$/.test(txt) || (txt.startsWith('$$') && txt.endsWith('$$'));
+
+                if (/^Определение(\s*\(|\.|\s*:)/i.test(txt)) {
+                    let calloutName = '';
+                    let cleanInner = inner;
+                    const namedMatch = inner.match(/^Определение\s*\(([^)]+)\)[.:\s]*/i);
+                    if (namedMatch) {
+                        calloutName = namedMatch[1].trim();
+                        cleanInner = inner.replace(/^Определение\s*\([^)]+\)[.:\s]*/i, '');
+                    } else {
+                        cleanInner = inner.replace(/^Определение[.:\s]*/i, '');
+                    }
+
+                    bodyHtml += `
+                        <div class="callout callout-definition">
+                            <div class="callout-title">
+                                <span class="callout-badge">Определение</span>
+                                ${calloutName ? `<span class="callout-name">${calloutName}</span>` : ''}
+                            </div>
+                            <p>${cleanInner}</p>
+                        </div>`;
+                } else if (/^Теорема(\s*\(|\.|\s*:)/i.test(txt)) {
+                    let calloutName = '';
+                    let cleanInner = inner;
+                    const namedMatch = inner.match(/^Теорема\s*\(([^)]+)\)[.:\s]*/i);
+                    if (namedMatch) {
+                        calloutName = namedMatch[1].trim();
+                        cleanInner = inner.replace(/^Теорема\s*\([^)]+\)[.:\s]*/i, '');
+                    } else {
+                        cleanInner = inner.replace(/^Теорема[.:\s]*/i, '');
+                    }
+
+                    bodyHtml += `
+                        <div class="callout callout-theorem">
+                            <div class="callout-title">
+                                <span class="callout-badge">Теорема</span>
+                                ${calloutName ? `<span class="callout-name">${calloutName}</span>` : ''}
+                            </div>
+                            <p>${cleanInner}</p>
+                        </div>`;
+                } else if (/^Пример(\s*\(|\.|\s*:|\s+\d+)/i.test(txt)) {
+                    let calloutName = '';
+                    let cleanInner = inner;
+                    const namedMatch = inner.match(/^Пример\s*(?:\(([^)]+)\)|(\d+))[.:\s]*/i);
+                    if (namedMatch) {
+                        calloutName = namedMatch[1] ? namedMatch[1].trim() : `Пример ${namedMatch[2]}`;
+                        cleanInner = inner.replace(/^Пример\s*(?:\([^)]+\)|\d+)[.:\s]*/i, '');
+                    } else {
+                        cleanInner = inner.replace(/^Пример[.:\s]*/i, '');
+                    }
+
+                    bodyHtml += `
+                        <div class="callout callout-example">
+                            <div class="callout-title">
+                                <span class="callout-badge">Пример</span>
+                                ${calloutName ? `<span class="callout-name">${calloutName}</span>` : ''}
+                            </div>
+                            <p>${cleanInner}</p>
+                        </div>`;
+                } else if (/^(Замечание|Внимание|Важно|Ловушка|Прикладной аспект)(\s*\(|\.|\s*:)/i.test(txt)) {
+                    let cleanInner = inner.replace(/^(?:Замечание|Внимание|Важно|Ловушка|Прикладной аспект)[.:\s]*/i, '');
+                    bodyHtml += `
+                        <div class="callout callout-trap">
+                            <div class="callout-title">
+                                <span class="callout-badge">Важно</span>
+                            </div>
+                            <p>${cleanInner}</p>
+                        </div>`;
+                } else if (/^(Доказательство)(\s*\(|\.|\s*:)/i.test(txt)) {
+                    let cleanInner = inner.replace(/^(?:Доказательство)[.:\s]*/i, '');
+                    bodyHtml += `
+                        <div class="callout callout-proof">
+                            <div class="callout-title">
+                                <span class="callout-badge">Доказательство</span>
+                            </div>
+                            <p>${cleanInner}</p>
+                        </div>`;
+                } else if (isDisplayFormula) {
+                    bodyHtml += `
+                        <div class="formula-card">
+                            <div class="formula-card-header">
+                                <span class="formula-badge">
+                                    <span>Формула</span>
+                                </span>
+                            </div>
+                            <div class="formula-card-body">
+                                ${inner}
+                            </div>
+                        </div>`;
+                } else if (el.tagName === 'P') {
+                    bodyHtml += `
+                        <div class="lecture-para-card">
+                            <p>${inner}</p>
+                        </div>`;
+                } else {
+                    bodyHtml += `
+                        <div class="lecture-para-card">
+                            ${el.outerHTML}
+                        </div>`;
+                }
+            });
+            sec.bodyHtml = bodyHtml;
+            delete sec.elements;
+        });
+
+        return {
+            modNum,
+            modTitle: detectedModTitle,
+            sections
+        };
+    },
+
+    renderModule(modData) {
+        const { modNum, modTitle, sections } = modData;
+
+        // 1. Добавление таба в переключатель модулей
+        const switcher = document.querySelector('.module-switcher');
+        let tab = document.querySelector(`.btn-module-tab[data-module="${modNum}"]`);
+        if (!tab && switcher) {
+            tab = document.createElement('button');
+            tab.className = 'btn-module-tab';
+            tab.setAttribute('data-module', String(modNum));
+            tab.textContent = `Модуль ${modNum}`;
+            switcher.appendChild(tab);
+        }
+        if (tab) {
+            tab.setAttribute('data-title', `Раздел ${modNum}: ${modTitle}`);
+        }
+
+        // 2. Создание группы навигации в боковом меню
+        const sidebar = document.querySelector('.sidebar');
+        let navGroup = document.getElementById(`nav-group-mod${modNum}`);
+        if (!navGroup && sidebar) {
+            navGroup = document.createElement('div');
+            navGroup.id = `nav-group-mod${modNum}`;
+            navGroup.className = 'module-nav-group';
+            navGroup.style.display = 'none';
+
+            const existingGroups = sidebar.querySelectorAll('.module-nav-group');
+            if (existingGroups.length) {
+                existingGroups[existingGroups.length - 1].after(navGroup);
+            } else {
+                sidebar.appendChild(navGroup);
+            }
+        }
+
+        if (navGroup) {
+            let navHtml = `
+                <div class="nav-group-title">Лекция ${modNum}: ${modTitle}</div>
+            `;
+            sections.forEach((s, idx) => {
+                const targetId = `sec-custom-${modNum}-${idx}`;
+                navHtml += `<a class="nav-item${idx === 0 ? ' active' : ''}" data-target="${targetId}">${s.title}</a>\n`;
+            });
+            navGroup.innerHTML = navHtml;
+        }
+
+        // 3. Создание разделов с контентом в основном блоке
+        const mainWrapper = document.querySelector('.main-wrapper');
+        if (mainWrapper) {
+            mainWrapper.querySelectorAll(`section[id^="sec-custom-${modNum}-"]`).forEach(s => s.remove());
+
+            sections.forEach((s, idx) => {
+                const targetId = `sec-custom-${modNum}-${idx}`;
+                const secEl = document.createElement('section');
+                secEl.id = targetId;
+                secEl.className = 'content-section';
+
+                secEl.innerHTML = `
+                    <h1 class="section-title">${s.title}</h1>
+                    <p class="section-subtitle">${s.subtitle}</p>
+
+                    <!-- Панель озвучивания раздела (TTS) -->
+                    <div class="tts-player" data-section="${targetId}">
+                        <button class="btn-tts btn-tts-play" title="Прослушать раздел вслух">
+                            <span class="tts-icon">▶</span>
+                            <span class="tts-text">Прослушать раздел</span>
+                        </button>
+                        <button class="btn-tts btn-tts-stop" title="Остановить озвучивание" style="display:none;">
+                            <span class="tts-icon">⏹</span>
+                            <span class="tts-text">Стоп</span>
+                        </button>
+                        <div class="tts-meta" style="display:none;">
+                            <label class="tts-voice-label" title="Выбор диктора">
+                                <span>Голос:</span>
+                                <select class="tts-voice-select">
+                                    <option value="">Загрузка голосов...</option>
+                                </select>
+                            </label>
+                            <label class="tts-speed-label" title="Скорость чтения">
+                                <span>Скорость:</span>
+                                <select class="tts-speed-select">
+                                    <option value="0.85">0.85x</option>
+                                    <option value="1.0" selected>1.0x</option>
+                                    <option value="1.2">1.2x</option>
+                                    <option value="1.4">1.4x</option>
+                                </select>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="custom-lecture-content" style="margin-top:1.4rem; line-height:1.75; font-size:1.02rem;">
+                        ${s.bodyHtml}
+                    </div>
+                `;
+
+                mainWrapper.appendChild(secEl);
+                safeRenderMath(secEl);
+            });
+        }
+
+        if (window.TTSController) {
+            window.TTSController.init();
+        }
+    },
+
+    saveModuleToStorage(modData) {
+        try {
+            let list = this.getStoredModules();
+            list = list.filter(m => m.modNum !== modData.modNum);
+            list.push(modData);
+            localStorage.setItem('priklad_custom_modules', JSON.stringify(list));
+        } catch (e) {
+            console.warn('[DocxProcessor] Не удалось сохранить модуль в localStorage:', e);
+        }
+    },
+
+    getStoredModules() {
+        try {
+            const raw = localStorage.getItem('priklad_custom_modules');
+            return raw ? JSON.parse(raw) : [];
+        } catch (e) {
+            return [];
+        }
+    },
+
+    restoreFromStorage() {
+        const list = this.getStoredModules();
+        if (list && list.length) {
+            list.forEach(m => this.renderModule(m));
+        }
+    },
+
+    clearCustomModules() {
+        if (!confirm('Вы действительно хотите удалить все импортированные модули?')) {
+            return;
+        }
+
+        try {
+            const list = this.getStoredModules();
+            list.forEach(m => {
+                document.querySelector(`.btn-module-tab[data-module="${m.modNum}"]`)?.remove();
+                document.getElementById(`nav-group-mod${m.modNum}`)?.remove();
+                document.querySelectorAll(`section[id^="sec-custom-${m.modNum}-"]`).forEach(s => s.remove());
+            });
+            localStorage.removeItem('priklad_custom_modules');
+            switchModule(1);
+            this.showFeedback('success', 'Все импортированные модули успешно сброшены.');
+            setTimeout(() => this.closeModal(), 1200);
+        } catch (e) {
+            console.error('[DocxProcessor] Ошибка сброса модулей:', e);
+        }
+    }
+};
+
+window.DocxProcessor = DocxProcessor;

@@ -36,7 +36,8 @@
 
     <!-- Локальные стили -->
 
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/style.css?v=2.4">
+    <link rel="stylesheet" href="css/quiz.css?v=2.4">
 
 </head>
 
@@ -2661,6 +2662,88 @@
                 Оба множества являются <b>линейными подпространствами</b> (замкнуты относительно сложения и умножения на число).
             </div>
 
+            <!-- ИНТЕРАКТИВНЫЙ СТЕНД: ЯДРО И ОБРАЗ ОПЕРАТОРА -->
+            <div class="interactive-card" id="stand-kernel-image" style="margin-top:1.6rem; margin-bottom:1.8rem;">
+                <div class="card-title-row">
+                    <h3>Интерактивная лаборатория: ядро $\operatorname{Ker}(T)$ и образ $\operatorname{Im}(T)$</h3>
+                </div>
+                <p style="font-size:0.92rem; color:var(--text-muted); margin-bottom:1rem;">
+                    Исследуйте отображение пространства прообразов $V$ в пространство образов $W$. Задайте произвольную матрицу оператора $T$ или выберите пресет, чтобы увидеть геометрическое расщепление пространств, вычислить базисы ядра $\operatorname{Ker}(T)$ и образа $\operatorname{Im}(T)$, а также проверить теорему о ранге и дефекте.
+                </p>
+
+                <div class="controls-grid" style="align-items:flex-start; gap:1.4rem;">
+                    <!-- Выбор размерности и пресеты -->
+                    <div class="control-group" style="min-width:260px;">
+                        <label style="font-weight:600; margin-bottom:0.4rem;">Размерность оператора:</label>
+                        <div style="display:flex; gap:0.5rem; margin-bottom:0.8rem;">
+                            <button type="button" class="btn-chip active" id="btn-kerimg-dim-2d" title="Оператор на плоскости T: R² → R²">2D плоскость (2×2)</button>
+                            <button type="button" class="btn-chip" id="btn-kerimg-dim-3d" title="Оператор в пространстве T: R³ → R³">3D пространство (3×3)</button>
+                        </div>
+
+                        <label style="font-weight:600; margin-bottom:0.3rem;">Канонические пресеты:</label>
+                        <div style="display:flex; gap:0.35rem; flex-wrap:wrap; margin-top:0.2rem;">
+                            <button type="button" class="btn-chip" id="btn-kerimg-preset-lecture" title="Пример из лекции 2.5: матрица 3x3 ранга 2">Пример лекции</button>
+                            <button type="button" class="btn-chip" id="btn-kerimg-preset-proj" title="Ортогональный проектор">Проектор P</button>
+                            <button type="button" class="btn-chip" id="btn-kerimg-preset-rank1" title="Сжатие ранга 1 в прямую">Ранг 1</button>
+                            <button type="button" class="btn-chip" id="btn-kerimg-preset-full" title="Полный ранг (изоморфизм, ядро {0})">Полный ранг</button>
+                            <button type="button" class="btn-chip" id="btn-kerimg-preset-zero" title="Нулевой оператор (T = 0)">Нулевой (T=0)</button>
+                        </div>
+                    </div>
+
+                    <!-- Ввод матрицы T -->
+                    <div class="control-group">
+                        <label style="font-weight:600; margin-bottom:0.3rem;" id="lbl-kerimg-matrix">Матрица оператора $T$:</label>
+                        <div class="matrix-input-table" id="table-kerimg-matrix" style="margin:0.2rem 0;">
+                            <!-- Заполняется динамически в JS -->
+                        </div>
+                    </div>
+
+                    <!-- Ввод тестового вектора x -->
+                    <div class="control-group">
+                        <label style="font-weight:600; margin-bottom:0.3rem;">Тестовый вектор $x \in V$:</label>
+                        <div id="container-kerimg-vector" style="display:flex; gap:0.5rem; align-items:center; margin:0.2rem 0; flex-wrap:wrap;">
+                            <!-- Заполняется динамически в JS -->
+                        </div>
+                        <div style="display:flex; gap:0.35rem; flex-wrap:wrap; margin-top:0.4rem;">
+                            <button type="button" class="btn-chip" id="btn-kerimg-vec-kernel" title="Подставить вектор из ядра Ker(T)">Вектор из ядра (x ∈ Ker)</button>
+                            <button type="button" class="btn-chip" id="btn-kerimg-vec-basis1" title="Базисный e₁">e₁ (1, 0, ...)</button>
+                            <button type="button" class="btn-chip" id="btn-kerimg-vec-random" title="Произвольный вектор">Случайный</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Визуализация V и W: друг над другом по порядку -->
+                <div style="display:flex; flex-direction:column; gap:1.4rem; margin-top:1.4rem;">
+                    <!-- 1. Пространство прообразов V -->
+                    <div style="background:var(--bg-card, #ffffff); border-radius:10px; border:1px solid var(--border-color, #e6ded7); padding:1rem 1.2rem;">
+                        <div style="font-weight:600; font-size:0.95rem; margin-bottom:0.6rem; color:var(--text-main); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.5rem;">
+                            <span>1. Пространство прообразов $V$: ядро $\operatorname{Ker}(T)$ и тестовый вектор $x$</span>
+                            <span id="badge-kernel-status" class="badge"></span>
+                        </div>
+                        <div id="plot-kernel-domain" class="plot-container" style="height:420px; width:100%;"></div>
+                    </div>
+
+                    <!-- Стрелка перехода V -> W -->
+                    <div style="text-align:center; margin:-0.5rem 0; color:var(--primary); font-weight:600; font-size:0.95rem; display:flex; align-items:center; justify-content:center; gap:0.8rem;">
+                        <span style="height:1px; flex:1; background:var(--border-color, #e6ded7);"></span>
+                        <span>Действие оператора: $T \colon V \to W \quad (x \mapsto T(x))$ ↓</span>
+                        <span style="height:1px; flex:1; background:var(--border-color, #e6ded7);"></span>
+                    </div>
+
+                    <!-- 2. Пространство образов W -->
+                    <div style="background:var(--bg-card, #ffffff); border-radius:10px; border:1px solid var(--border-color, #e6ded7); padding:1rem 1.2rem;">
+                        <div style="font-weight:600; font-size:0.95rem; margin-bottom:0.6rem; color:var(--text-main); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.5rem;">
+                            <span>2. Пространство образов $W$: образ $\operatorname{Im}(T)$ и образ вектора $T(x)$</span>
+                            <span id="badge-image-status" class="badge"></span>
+                        </div>
+                        <div id="plot-image-codomain" class="plot-container" style="height:420px; width:100%;"></div>
+                    </div>
+                </div>
+
+                <!-- Аналитическая карточка -->
+                <div id="kernel-image-analysis" class="callout callout-theory" style="margin-top:1.2rem;"></div>
+            </div>
+
             <div class="callout callout-theory">
                 <div class="callout-title">Содержательный геометрический и прикладной смысл</div>
                 <ul style="margin-left:1.4rem;">
@@ -4314,6 +4397,10 @@
     <script src="js/variants.js"></script>
 
     <script src="js/app.js"></script>
+
+    <!-- Модуль пошагового обучения и проверочных вопросов -->
+    <script src="js/quiz-data.js?v=2.4"></script>
+    <script src="js/quiz-engine.js?v=2.4"></script>
 
 
     <!-- Модальное окно загрузки и конвертации Word (.docx) в модуль курса -->
