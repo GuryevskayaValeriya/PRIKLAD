@@ -2052,17 +2052,26 @@
                         <label>Выберите номер варианта:</label>
 
                         <select id="select-seminar-variant">
-
-                            <script>
-
-                                for(let i=1; i<=20; i++) {
-
-                                    document.write(`<option value="${i}">Вариант №${i}</option>`);
-
-                                }
-
-                            </script>
-
+                            <option value="1">Вариант №1</option>
+                            <option value="2">Вариант №2</option>
+                            <option value="3">Вариант №3</option>
+                            <option value="4">Вариант №4</option>
+                            <option value="5">Вариант №5</option>
+                            <option value="6">Вариант №6</option>
+                            <option value="7">Вариант №7</option>
+                            <option value="8">Вариант №8</option>
+                            <option value="9">Вариант №9</option>
+                            <option value="10">Вариант №10</option>
+                            <option value="11">Вариант №11</option>
+                            <option value="12">Вариант №12</option>
+                            <option value="13">Вариант №13</option>
+                            <option value="14">Вариант №14</option>
+                            <option value="15">Вариант №15</option>
+                            <option value="16">Вариант №16</option>
+                            <option value="17">Вариант №17</option>
+                            <option value="18">Вариант №18</option>
+                            <option value="19">Вариант №19</option>
+                            <option value="20">Вариант №20</option>
                         </select>
 
                     </div>
@@ -2884,6 +2893,84 @@
                 </div>
                 <div id="plot-gram-schmidt-3d" class="plot-container" style="margin-top:1rem;"></div>
                 <div id="gs-step-explanation" class="callout callout-theory" style="margin-top:1rem;"></div>
+            </div>
+
+            <!-- ИНТЕРАКТИВНЫЙ КАЛЬКУЛЯТОР ГРАМА-ШМИДТА С ПОЛЬЗОВАТЕЛЬСКИМИ ВЕКТОРАМИ -->
+            <div class="interactive-card" style="margin-top:2rem;">
+                <div class="card-title-row">
+                    <h3>Калькулятор ортогонализации Грама-Шмидта (произвольные векторы)</h3>
+                    <span class="badge">Custom Gram-Schmidt Solver</span>
+                </div>
+                <p style="font-size:0.92rem; color:var(--text-muted); margin-bottom:1rem;">
+                    Задайте собственные трёхмерные векторы $v_1, v_2, v_3 \in \mathbb{R}^3$ или выберите один из готовых пресетов. Калькулятор вычислит проекции, ортонормированный базис $q_1, q_2, q_3$, сформирует QR-разложение ($A = QR$), проверит унитарность $Q^T Q = I$ и построит интерактивную 3D-сцену.
+                </p>
+
+                <!-- Пресеты векторов -->
+                <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:1rem; align-items:center;">
+                    <span style="font-size:0.86rem; font-weight:600; color:var(--text-muted);">Готовые пресеты:</span>
+                    <button class="btn btn-secondary" id="btn-custom-gs-preset-lecture" style="font-size:0.82rem; padding:0.35rem 0.65rem;">Пример из лекции (1,1,0), (1,0,1), (0,1,1)</button>
+                    <button class="btn btn-secondary" id="btn-custom-gs-preset-stand" style="font-size:0.82rem; padding:0.35rem 0.65rem;">Стенд выше (2,0,0), (1,2,0), (1,1,2)</button>
+                    <button class="btn btn-secondary" id="btn-custom-gs-preset-standard" style="font-size:0.82rem; padding:0.35rem 0.65rem;">Стандартный базис e₁, e₂, e₃</button>
+                    <button class="btn btn-secondary" id="btn-custom-gs-preset-oblique" style="font-size:0.82rem; padding:0.35rem 0.65rem;">Косоугольный (2,1,0), (1,3,1), (1,1,3)</button>
+                    <button class="btn btn-secondary" id="btn-custom-gs-preset-dep" style="font-size:0.82rem; padding:0.35rem 0.65rem;">Зависимая система (ранг 2)</button>
+                    <button class="btn btn-secondary" id="btn-custom-gs-preset-random" style="font-size:0.82rem; padding:0.35rem 0.65rem;">Случайные векторы</button>
+                </div>
+
+                                <!-- Сетка ввода координат векторов v1, v2, v3 (все 3 вектора в строчку) -->
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:1rem; background:var(--bg-card, #ffffff); padding:1.2rem; border-radius:8px; border:1px solid var(--border-color, #e6ded7);">
+                    <!-- v1 -->
+                    <div style="display:flex; flex-direction:column; gap:0.45rem; min-width:0;">
+                        <span style="font-weight:700; color:#b34a3b; font-size:1rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Вектор $v_1 = (x_1, y_1, z_1)^T$:</span>
+                        <div style="display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:0.35rem;">
+                            <input type="number" id="input-gs-v1-x" value="1" step="any" placeholder="x₁" style="width:100%; min-width:0; text-align:center; font-size:1.1rem; font-weight:700; padding:0.45rem 0.15rem; border:1px solid var(--border-color, #d4c5b9); border-radius:6px; background:#fff;">
+                            <input type="number" id="input-gs-v1-y" value="1" step="any" placeholder="y₁" style="width:100%; min-width:0; text-align:center; font-size:1.1rem; font-weight:700; padding:0.45rem 0.15rem; border:1px solid var(--border-color, #d4c5b9); border-radius:6px; background:#fff;">
+                            <input type="number" id="input-gs-v1-z" value="0" step="any" placeholder="z₁" style="width:100%; min-width:0; text-align:center; font-size:1.1rem; font-weight:700; padding:0.45rem 0.15rem; border:1px solid var(--border-color, #d4c5b9); border-radius:6px; background:#fff;">
+                        </div>
+                    </div>
+                    <!-- v2 -->
+                    <div style="display:flex; flex-direction:column; gap:0.45rem; min-width:0;">
+                        <span style="font-weight:700; color:#75523c; font-size:1rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Вектор $v_2 = (x_2, y_2, z_2)^T$:</span>
+                        <div style="display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:0.35rem;">
+                            <input type="number" id="input-gs-v2-x" value="1" step="any" placeholder="x₂" style="width:100%; min-width:0; text-align:center; font-size:1.1rem; font-weight:700; padding:0.45rem 0.15rem; border:1px solid var(--border-color, #d4c5b9); border-radius:6px; background:#fff;">
+                            <input type="number" id="input-gs-v2-y" value="0" step="any" placeholder="y₂" style="width:100%; min-width:0; text-align:center; font-size:1.1rem; font-weight:700; padding:0.45rem 0.15rem; border:1px solid var(--border-color, #d4c5b9); border-radius:6px; background:#fff;">
+                            <input type="number" id="input-gs-v2-z" value="1" step="any" placeholder="z₂" style="width:100%; min-width:0; text-align:center; font-size:1.1rem; font-weight:700; padding:0.45rem 0.15rem; border:1px solid var(--border-color, #d4c5b9); border-radius:6px; background:#fff;">
+                        </div>
+                    </div>
+                    <!-- v3 -->
+                    <div style="display:flex; flex-direction:column; gap:0.45rem; min-width:0;">
+                        <span style="font-weight:700; color:#b8863b; font-size:1rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Вектор $v_3 = (x_3, y_3, z_3)^T$:</span>
+                        <div style="display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:0.35rem;">
+                            <input type="number" id="input-gs-v3-x" value="0" step="any" placeholder="x₃" style="width:100%; min-width:0; text-align:center; font-size:1.1rem; font-weight:700; padding:0.45rem 0.15rem; border:1px solid var(--border-color, #d4c5b9); border-radius:6px; background:#fff;">
+                            <input type="number" id="input-gs-v3-y" value="1" step="any" placeholder="y₃" style="width:100%; min-width:0; text-align:center; font-size:1.1rem; font-weight:700; padding:0.45rem 0.15rem; border:1px solid var(--border-color, #d4c5b9); border-radius:6px; background:#fff;">
+                            <input type="number" id="input-gs-v3-z" value="1" step="any" placeholder="z₃" style="width:100%; min-width:0; text-align:center; font-size:1.1rem; font-weight:700; padding:0.45rem 0.15rem; border:1px solid var(--border-color, #d4c5b9); border-radius:6px; background:#fff;">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Кнопки управления и фильтры отображения сцены -->
+                <div style="margin-top:1rem; display:flex; gap:1rem; align-items:center; flex-wrap:wrap;">
+                    <button class="btn btn-primary" id="btn-run-custom-gs">
+                        <span>Ортогонализовать и рассчитать QR</span>
+                    </button>
+                    <label style="font-size:0.88rem; color:var(--text-main); display:inline-flex; align-items:center; gap:0.4rem; cursor:pointer;">
+                        <input type="checkbox" id="cb-custom-gs-show-orig" checked>
+                        <span>Исходные $v_1, v_2, v_3$</span>
+                    </label>
+                    <label style="font-size:0.88rem; color:var(--text-main); display:inline-flex; align-items:center; gap:0.4rem; cursor:pointer;">
+                        <input type="checkbox" id="cb-custom-gs-show-span" checked>
+                        <span>Плоскость $\operatorname{Span}(q_1, q_2)$</span>
+                    </label>
+                    <label style="font-size:0.88rem; color:var(--text-main); display:inline-flex; align-items:center; gap:0.4rem; cursor:pointer;">
+                        <input type="checkbox" id="cb-custom-gs-show-proj" checked>
+                        <span>Проекции и остатки</span>
+                    </label>
+                </div>
+
+                <!-- Контейнер для 3D-графика -->
+                <div id="plot-custom-gs-3d" class="plot-container" style="margin-top:1.2rem; height:520px;"></div>
+
+                <!-- Блок аналитического протокола и матриц QR -->
+                <div id="custom-gs-results-box" class="callout callout-theory" style="margin-top:1.2rem;"></div>
             </div>
         </section>
 

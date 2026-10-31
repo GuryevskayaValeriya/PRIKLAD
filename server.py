@@ -23,8 +23,8 @@ def run_server():
     os.chdir(DIRECTORY)
     url = f"http://localhost:{PORT}/index.html"
     print("=" * 65)
-    print(f"🚀 Интерактивный учебник запущен на: {url}")
-    print(f"📁 Корневая папка: {DIRECTORY}")
+    print(f"[*] Интерактивный учебник запущен на: {url}")
+    print(f"[*] Корневая папка: {DIRECTORY}")
     print("Нажмите Ctrl+C для остановки сервера.")
     print("=" * 65)
 

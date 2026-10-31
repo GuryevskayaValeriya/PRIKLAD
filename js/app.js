@@ -6,6 +6,7 @@
 // --- 1. Базовые алгоритмы линейной алгебры ---
 
 function normP(x, p = 2.0, safeOverflow = false) {
+    if (!x || x.length === 0) return 0;
     if (p < 1.0) throw new Error("Норма Lp определена только для p >= 1.0");
     if (!isFinite(p)) {
         return Math.max(...x.map(v => Math.abs(v)));
@@ -950,6 +951,7 @@ function switchModule(modId) {
         const introSec = document.getElementById('sec-3-intro');
         if (introSec) introSec.classList.add('active');
         triggerRenderForSection('sec-3-intro');
+        safeRenderMath(introSec);
     } else {
         const customGroup = document.getElementById(`nav-group-mod${modId}`);
         if (customGroup) customGroup.style.display = 'block';
@@ -1033,6 +1035,7 @@ function triggerRenderForSection(sectionId) {
         updateKernelImageStand();
     } else if (sectionId === 'sec-2-6') {
         renderGramSchmidt3D(currentGsStep !== undefined ? currentGsStep : 4);
+        runCustomGramSchmidt();
     } else if (sectionId === 'sec-2-7') {
         const y1 = parseFloat(document.getElementById('slider-proj-y1')?.value || 2);
         const y2 = parseFloat(document.getElementById('slider-proj-y2')?.value || 3);
@@ -1518,6 +1521,8 @@ document.addEventListener('DOMContentLoaded', () => {
     renderCanonicalOperators2D();
     updateLinearOperatorStand();
     renderGramSchmidt3D(4);
+    initCustomGramSchmidtControls();
+    runCustomGramSchmidt();
     renderOrthogonalProjection3D(2, 3, 4);
     renderConditionExperiment(7);
     loadSeminar2Variant(1);
@@ -3780,6 +3785,450 @@ function renderGramSchmidt3D(step = 4) {
 }
 
 // -------------------------------------------------------------------------
+
+// =========================================================================
+// [2.6.2] КАЛЬКУЛЯТОР ОРТОГОНАЛИЗАЦИИ ГРАМА-ШМИДТА (ПРОИЗВОЛЬНЫЕ ВЕКТОРЫ)
+// =========================================================================
+
+function readCustomGsVectorInputs() {
+    const parse = (id, def) => {
+        const val = parseFloat(document.getElementById(id)?.value);
+        return isNaN(val) ? def : val;
+    };
+    return {
+        v1: [parse('input-gs-v1-x', 1), parse('input-gs-v1-y', 1), parse('input-gs-v1-z', 0)],
+        v2: [parse('input-gs-v2-x', 1), parse('input-gs-v2-y', 0), parse('input-gs-v2-z', 1)],
+        v3: [parse('input-gs-v3-x', 0), parse('input-gs-v3-y', 1), parse('input-gs-v3-z', 1)]
+    };
+}
+
+function setCustomGsVectorInputs(v1, v2, v3) {
+    const set = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.value = val;
+    };
+    set('input-gs-v1-x', v1[0]); set('input-gs-v1-y', v1[1]); set('input-gs-v1-z', v1[2]);
+    set('input-gs-v2-x', v2[0]); set('input-gs-v2-y', v2[1]); set('input-gs-v2-z', v2[2]);
+    set('input-gs-v3-x', v3[0]); set('input-gs-v3-y', v3[1]); set('input-gs-v3-z', v3[2]);
+    runCustomGramSchmidt();
+}
+
+function runCustomGramSchmidt() {
+    const container = document.getElementById('plot-custom-gs-3d');
+    const resultsBox = document.getElementById('custom-gs-results-box');
+    if (!container || !resultsBox) return;
+
+    const { v1, v2, v3 } = readCustomGsVectorInputs();
+    const showOrig = document.getElementById('cb-custom-gs-show-orig')?.checked ?? true;
+    const showSpan = document.getElementById('cb-custom-gs-show-span')?.checked ?? true;
+    const showProj = document.getElementById('cb-custom-gs-show-proj')?.checked ?? true;
+
+    const EPS = 1e-7;
+    let isDependent = false;
+    let depMessage = '';
+
+    // Шаг 1: u1 = v1, q1 = u1 / ||u1||
+    const u1 = [...v1];
+    const normU1 = Math.hypot(...u1);
+    let q1 = null;
+    if (normU1 > EPS) {
+        q1 = u1.map(x => x / normU1);
+    } else {
+        isDependent = true;
+        depMessage = 'Вектор v₁ является нулевым';
+    }
+
+    // Шаг 2: r12 = <v2, q1>, u2 = v2 - r12 * q1, q2 = u2 / ||u2||
+    let r12 = 0;
+    let proj2_1 = [0, 0, 0];
+    let u2 = [...v2];
+    if (q1) {
+        r12 = dotProduct(v2, q1);
+        proj2_1 = q1.map(x => x * r12);
+        u2 = v2.map((x, i) => x - proj2_1[i]);
+    }
+    const normU2 = Math.hypot(...u2);
+    let q2 = null;
+    if (normU2 > EPS) {
+        q2 = u2.map(x => x / normU2);
+    } else {
+        isDependent = true;
+        depMessage = depMessage || 'Вектор v₂ линейно зависит от v₁';
+    }
+
+    // Шаг 3: r13 = <v3, q1>, r23 = <v3, q2>, u3 = v3 - (r13*q1 + r23*q2), q3 = u3 / ||u3||
+    let r13 = 0, r23 = 0;
+    let proj3_1 = [0, 0, 0], proj3_2 = [0, 0, 0];
+    let u3 = [...v3];
+    if (q1) {
+        r13 = dotProduct(v3, q1);
+        proj3_1 = q1.map(x => x * r13);
+    }
+    if (q2) {
+        r23 = dotProduct(v3, q2);
+        proj3_2 = q2.map(x => x * r23);
+    }
+    const proj3 = [proj3_1[0] + proj3_2[0], proj3_1[1] + proj3_2[1], proj3_1[2] + proj3_2[2]];
+    u3 = v3.map((x, i) => x - proj3[i]);
+    const normU3 = Math.hypot(...u3);
+    let q3 = null;
+    if (normU3 > EPS) {
+        q3 = u3.map(x => x / normU3);
+    } else {
+        isDependent = true;
+        depMessage = depMessage || 'Вектор v₃ линейно выражается через v₁ и v₂';
+    }
+
+    // Диапазон осей для 3D сцены
+    const allVals = [0];
+    [v1, v2, v3].forEach(v => v.forEach(c => allVals.push(c)));
+    if (q1) q1.forEach(c => allVals.push(c));
+    if (q2) q2.forEach(c => allVals.push(c));
+    if (q3) q3.forEach(c => allVals.push(c));
+    const maxVal = Math.max(...allVals.map(Math.abs), 1.5);
+    const limit = Math.ceil(maxVal * 1.25);
+
+    // Компактное и элегантное форматирование чисел (целые без нулей, дроби до 3 знаков)
+    const fmtNum = (n) => {
+        if (Math.abs(n) < 1e-9) return '0';
+        if (Math.abs(n - Math.round(n)) < 1e-4) return Math.round(n).toString();
+        return n.toFixed(3);
+    };
+    const fmtVec = (v) => `(${v.map(x => fmtNum(x)).join(', ')})`;
+    const fVecT = (vec) => vec ? `(${vec.map(x => fmtNum(x)).join(', \\; ')})^T` : '\\text{—}';
+
+    const traces = [];
+
+    // Начало координат
+    traces.push({
+        type: 'scatter3d', mode: 'markers+text',
+        x: [0], y: [0], z: [0],
+        marker: { size: 6, color: '#2a1d17' },
+        text: ['O (0,0,0)'],
+        textposition: 'bottom right',
+        textfont: { size: 12, color: '#2a1d17', family: 'Inter, sans-serif' },
+        name: 'Ноль (0,0,0)',
+        showlegend: false
+    });
+
+    // Исходные векторы (крупные контрастные подписи и маркеры)
+    if (showOrig) {
+        traces.push({
+            type: 'scatter3d', mode: 'lines+markers+text',
+            x: [0, v1[0]], y: [0, v1[1]], z: [0, v1[2]],
+            line: { color: '#b34a3b', width: 5, dash: 'dash' },
+            marker: { size: [0, 8], color: '#b34a3b' },
+            text: ['', ` <b>v₁</b> ${fmtVec(v1)}`],
+            textposition: 'top right',
+            textfont: { size: 14, color: '#8a2b1e', family: 'Inter, sans-serif' },
+            name: 'Исходный v₁'
+        });
+        traces.push({
+            type: 'scatter3d', mode: 'lines+markers+text',
+            x: [0, v2[0]], y: [0, v2[1]], z: [0, v2[2]],
+            line: { color: '#75523c', width: 5, dash: 'dash' },
+            marker: { size: [0, 8], color: '#75523c' },
+            text: ['', ` <b>v₂</b> ${fmtVec(v2)}`],
+            textposition: 'top right',
+            textfont: { size: 14, color: '#573826', family: 'Inter, sans-serif' },
+            name: 'Исходный v₂'
+        });
+        traces.push({
+            type: 'scatter3d', mode: 'lines+markers+text',
+            x: [0, v3[0]], y: [0, v3[1]], z: [0, v3[2]],
+            line: { color: '#b8863b', width: 5, dash: 'dash' },
+            marker: { size: [0, 8], color: '#b8863b' },
+            text: ['', ` <b>v₃</b> ${fmtVec(v3)}`],
+            textposition: 'top right',
+            textfont: { size: 14, color: '#8c6324', family: 'Inter, sans-serif' },
+            name: 'Исходный v₃'
+        });
+    }
+
+    // Проекции и невязки
+    if (showProj) {
+        if (q1 && (Math.abs(r12) > EPS || normU2 > EPS)) {
+            traces.push({
+                type: 'scatter3d', mode: 'lines',
+                x: [0, proj2_1[0]], y: [0, proj2_1[1]], z: [0, proj2_1[2]],
+                line: { color: '#a89484', width: 4, dash: 'dot' },
+                name: 'proj(v₂) на q₁'
+            });
+            traces.push({
+                type: 'scatter3d', mode: 'lines',
+                x: [proj2_1[0], v2[0]], y: [proj2_1[1], v2[1]], z: [proj2_1[2], v2[2]],
+                line: { color: '#d97768', width: 3, dash: 'dot' },
+                name: 'Остаток u₂ ⊥ q₁'
+            });
+        }
+        if (q1 && q2 && (Math.hypot(...proj3) > EPS || normU3 > EPS)) {
+            traces.push({
+                type: 'scatter3d', mode: 'lines',
+                x: [0, proj3[0]], y: [0, proj3[1]], z: [0, proj3[2]],
+                line: { color: '#a89484', width: 4, dash: 'dot' },
+                name: 'proj(v₃) на Span(q₁, q₂)'
+            });
+            traces.push({
+                type: 'scatter3d', mode: 'lines',
+                x: [proj3[0], v3[0]], y: [proj3[1], v3[1]], z: [proj3[2], v3[2]],
+                line: { color: '#d97768', width: 3, dash: 'dot' },
+                name: 'Остаток u₃ ⊥ Span'
+            });
+        }
+    }
+
+    // Ортонормированные векторы q1, q2, q3 (крупные и отчетливые)
+    if (q1) {
+        traces.push({
+            type: 'scatter3d', mode: 'lines+markers+text',
+            x: [0, q1[0]], y: [0, q1[1]], z: [0, q1[2]],
+            line: { color: '#2e7d32', width: 8 },
+            marker: { size: [0, 10], color: '#2e7d32' },
+            text: ['', `  <b>q₁</b> ${fmtVec(q1)}`],
+            textposition: 'top right',
+            textfont: { size: 15, color: '#1b5e20', family: 'Inter, sans-serif' },
+            name: 'ОНБ q₁'
+        });
+    }
+    if (q2) {
+        traces.push({
+            type: 'scatter3d', mode: 'lines+markers+text',
+            x: [0, q2[0]], y: [0, q2[1]], z: [0, q2[2]],
+            line: { color: '#1565c0', width: 8 },
+            marker: { size: [0, 10], color: '#1565c0' },
+            text: ['', `  <b>q₂</b> ${fmtVec(q2)}`],
+            textposition: 'top right',
+            textfont: { size: 15, color: '#0d47a1', family: 'Inter, sans-serif' },
+            name: 'ОНБ q₂'
+        });
+    }
+    if (q3) {
+        traces.push({
+            type: 'scatter3d', mode: 'lines+markers+text',
+            x: [0, q3[0]], y: [0, q3[1]], z: [0, q3[2]],
+            line: { color: '#7b1fa2', width: 8 },
+            marker: { size: [0, 10], color: '#7b1fa2' },
+            text: ['', `  <b>q₃</b> ${fmtVec(q3)}`],
+            textposition: 'top right',
+            textfont: { size: 15, color: '#4a148c', family: 'Inter, sans-serif' },
+            name: 'ОНБ q₃'
+        });
+    }
+
+    // Плоскость Span(q1, q2)
+    if (showSpan && q1 && q2) {
+        const L = Math.max(1.5, Math.hypot(...v1), Math.hypot(...v2)) * 0.9;
+        const p1 = [-L * q1[0] - L * q2[0], -L * q1[1] - L * q2[1], -L * q1[2] - L * q2[2]];
+        const p2 = [ L * q1[0] - L * q2[0],  L * q1[1] - L * q2[1],  L * q1[2] - L * q2[2]];
+        const p3 = [ L * q1[0] + L * q2[0],  L * q1[1] + L * q2[1],  L * q1[2] + L * q2[2]];
+        const p4 = [-L * q1[0] + L * q2[0], -L * q1[1] + L * q2[1], -L * q1[2] + L * q2[2]];
+
+        traces.push({
+            type: 'mesh3d',
+            x: [p1[0], p2[0], p3[0], p4[0]],
+            y: [p1[1], p2[1], p3[1], p4[1]],
+            z: [p1[2], p2[2], p3[2], p4[2]],
+            i: [0, 0], j: [1, 2], k: [2, 3],
+            opacity: 0.22,
+            color: '#4caf50',
+            name: 'Плоскость Span(q₁, q₂)'
+        });
+    }
+
+    const layout = {
+        title: {
+            text: '3D-Ортогонализация Грама-Шмидта: {v₁, v₂, v₃} → {q₁, q₂, q₃}',
+            font: { family: 'Inter, sans-serif', size: 16, color: '#2a1d17' }
+        },
+        height: 520,
+        autosize: true,
+        uirevision: 'custom-gs-3d-camera',
+        scene: {
+            xaxis: {
+                title: { text: 'X₁', font: { size: 13, color: '#555' } },
+                tickfont: { size: 11 },
+                range: [-limit, limit]
+            },
+            yaxis: {
+                title: { text: 'X₂', font: { size: 13, color: '#555' } },
+                tickfont: { size: 11 },
+                range: [-limit, limit]
+            },
+            zaxis: {
+                title: { text: 'X₃', font: { size: 13, color: '#555' } },
+                tickfont: { size: 11 },
+                range: [-limit, limit]
+            },
+            camera: { eye: { x: 1.6, y: -1.6, z: 1.2 } },
+            aspectmode: 'cube',
+            uirevision: 'custom-gs-3d-camera'
+        },
+        template: 'plotly_white',
+        paper_bgcolor: 'rgba(0,0,0,0)',
+        plot_bgcolor: 'rgba(0,0,0,0)',
+        font: { family: 'Inter, sans-serif', color: '#2a1d17' },
+        margin: { l: 20, r: 20, t: 40, b: 20 }
+    };
+
+    Plotly.react(container, traces, layout, { responsive: true });
+
+    // Значения матриц
+    const q11 = q1 ? fmtNum(q1[0]) : '0', q12 = q1 ? fmtNum(q1[1]) : '0', q13 = q1 ? fmtNum(q1[2]) : '0';
+    const q21 = q2 ? fmtNum(q2[0]) : '0', q22 = q2 ? fmtNum(q2[1]) : '0', q23 = q2 ? fmtNum(q2[2]) : '0';
+    const q31 = q3 ? fmtNum(q3[0]) : '0', q32 = q3 ? fmtNum(q3[1]) : '0', q33 = q3 ? fmtNum(q3[2]) : '0';
+
+    const r11_str = fmtNum(normU1);
+    const r12_str = fmtNum(r12);
+    const r13_str = fmtNum(r13);
+    const r22_str = fmtNum(normU2);
+    const r23_str = fmtNum(r23);
+    const r33_str = fmtNum(normU3);
+
+    const a11 = fmtNum(v1[0]), a21 = fmtNum(v1[1]), a31 = fmtNum(v1[2]);
+    const a12 = fmtNum(v2[0]), a22 = fmtNum(v2[1]), a32 = fmtNum(v2[2]);
+    const a13 = fmtNum(v3[0]), a23 = fmtNum(v3[1]), a33 = fmtNum(v3[2]);
+
+    let dotCheckText = '';
+    let statusNotice = '';
+
+    if (isDependent) {
+        statusNotice = `
+            <p style="color:var(--danger, #b34a3b); font-weight:600; margin-bottom:0.8rem;">
+                Внимание: ранг системы меньше 3 (${depMessage}). Построенная система не образует полного базиса в $\\mathbb{R}^3$.
+            </p>
+        `;
+    } else {
+        const dot12 = dotProduct(q1, q2);
+        const dot13 = dotProduct(q1, q3);
+        const dot23 = dotProduct(q2, q3);
+        dotCheckText = `
+            <div style="margin-top:0.6rem; font-size:0.92rem; color:var(--text-main);">
+                Попарные скалярные произведения: $\\langle q_1, q_2 \\rangle = ${fmtNum(dot12)}$, $\\quad \\langle q_1, q_3 \\rangle = ${fmtNum(dot13)}$, $\\quad \\langle q_2, q_3 \\rangle = ${fmtNum(dot23)}$.<br>
+                <span style="color:var(--success); font-weight:700;">✓ Разложение выполнено абсолютно точно: $A = Q \\cdot R$, $Q^T Q = I$.</span>
+            </div>
+        `;
+    }
+
+    let mathReport = `
+        <h4 style="margin-bottom:0.6rem;">Результаты ортогонализации Грама-Шмидта и разложение A = Q · R</h4>
+        ${statusNotice}
+
+        <!-- Верхний ряд: две просторные карточки Q и R -->
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap:1.2rem; margin-top:0.8rem;">
+            <!-- Матрица Q -->
+            <div style="background:var(--bg-main, #faf8f5); border:1px solid var(--border-color, #e6ded7); border-radius:8px; padding:1.1rem; overflow-x:auto;">
+                <b>Ортонормированная матрица Q ($Q^T Q = I$):</b>
+                <div style="margin:0.6rem 0;">
+                    $$Q = \\begin{pmatrix} 
+                    ${q11} & ${q21} & ${q31} \\\\ 
+                    ${q12} & ${q22} & ${q32} \\\\ 
+                    ${q13} & ${q23} & ${q33} 
+                    \\end{pmatrix}$$
+                </div>
+                <div style="font-size:0.88rem; color:var(--text-secondary); line-height:1.6; margin-top:0.4rem;">
+                    $q_1 = ${fVecT(q1)}$<br>
+                    $q_2 = ${fVecT(q2)}$<br>
+                    $q_3 = ${fVecT(q3)}$
+                </div>
+            </div>
+
+            <!-- Матрица R -->
+            <div style="background:var(--bg-main, #faf8f5); border:1px solid var(--border-color, #e6ded7); border-radius:8px; padding:1.1rem; overflow-x:auto;">
+                <b>Верхнетреугольная матрица R:</b>
+                <div style="margin:0.6rem 0;">
+                    $$R = \\begin{pmatrix} 
+                    ${r11_str} & ${r12_str} & ${r13_str} \\\\ 
+                    0 & ${r22_str} & ${r23_str} \\\\ 
+                    0 & 0 & ${r33_str} 
+                    \\end{pmatrix}$$
+                </div>
+                <div style="font-size:0.86rem; color:var(--text-secondary); line-height:1.6; margin-top:0.4rem;">
+                    $\\|u_1\\|_2 = ${r11_str}$, $\\quad \\langle v_2, q_1 \\rangle = ${r12_str}$<br>
+                    $\\|u_2\\|_2 = ${r22_str}$, $\\quad \\langle v_3, q_1 \\rangle = ${r13_str}$<br>
+                    $\\|u_3\\|_2 = ${r33_str}$, $\\quad \\langle v_3, q_2 \\rangle = ${r23_str}$
+                </div>
+            </div>
+        </div>
+
+        <!-- Нижний блок: проверка произведения QR = A на всю ширину -->
+        <div style="margin-top:1.2rem; background:var(--bg-main, #faf8f5); border:1px solid var(--border-color, #e6ded7); border-radius:8px; padding:1.1rem; overflow-x:auto;">
+            <b>Проверка факторизации $A = Q \\cdot R$:</b>
+            <div style="margin:0.6rem 0;">
+                $$Q \\cdot R = \\begin{pmatrix} 
+                ${a11} & ${a12} & ${a13} \\\\ 
+                ${a21} & ${a22} & ${a23} \\\\ 
+                ${a31} & ${a32} & ${a33} 
+                \\end{pmatrix} = [v_1 \\mid v_2 \\mid v_3] = A$$
+            </div>
+            ${dotCheckText}
+        </div>
+    `;
+
+    resultsBox.innerHTML = mathReport;
+    if (window.renderMathInElement) {
+        renderMathInElement(resultsBox, {
+            delimiters: [
+                { left: '$$', right: '$$', display: true },
+                { left: '$', right: '$', display: false }
+            ],
+            throwOnError: false
+        });
+    }
+}
+
+
+function initCustomGramSchmidtControls() {
+    const btnRun = document.getElementById('btn-run-custom-gs');
+    btnRun?.addEventListener('click', runCustomGramSchmidt);
+
+    ['cb-custom-gs-show-orig', 'cb-custom-gs-show-span', 'cb-custom-gs-show-proj'].forEach(id => {
+        document.getElementById(id)?.addEventListener('change', runCustomGramSchmidt);
+    });
+
+    // Слушатели пресетов
+    document.getElementById('btn-custom-gs-preset-lecture')?.addEventListener('click', () => {
+        setCustomGsVectorInputs([1, 1, 0], [1, 0, 1], [0, 1, 1]);
+    });
+    document.getElementById('btn-custom-gs-preset-stand')?.addEventListener('click', () => {
+        setCustomGsVectorInputs([2, 0, 0], [1, 2, 0], [1, 1, 2]);
+    });
+    document.getElementById('btn-custom-gs-preset-standard')?.addEventListener('click', () => {
+        setCustomGsVectorInputs([1, 0, 0], [0, 1, 0], [0, 0, 1]);
+    });
+    document.getElementById('btn-custom-gs-preset-oblique')?.addEventListener('click', () => {
+        setCustomGsVectorInputs([2, 1, 0], [1, 3, 1], [1, 1, 3]);
+    });
+    document.getElementById('btn-custom-gs-preset-dep')?.addEventListener('click', () => {
+        setCustomGsVectorInputs([1, 2, 3], [2, 4, 6], [1, 0, 1]);
+    });
+    document.getElementById('btn-custom-gs-preset-random')?.addEventListener('click', () => {
+        const rand = () => Math.floor(Math.random() * 7) - 3;
+        setCustomGsVectorInputs(
+            [rand() || 1, rand(), rand()],
+            [rand(), rand() || 2, rand()],
+            [rand(), rand(), rand() || 3]
+        );
+    });
+
+    // Живое обновление при редактировании координат векторов с троттлингом
+    const inputs = [
+        'input-gs-v1-x', 'input-gs-v1-y', 'input-gs-v1-z',
+        'input-gs-v2-x', 'input-gs-v2-y', 'input-gs-v2-z',
+        'input-gs-v3-x', 'input-gs-v3-y', 'input-gs-v3-z'
+    ];
+    inputs.forEach(id => {
+        document.getElementById(id)?.addEventListener('input', rafThrottle(runCustomGramSchmidt));
+    });
+
+    // Автоматическая адаптация графиков при изменении размера окна
+    window.addEventListener('resize', rafThrottle(() => {
+        const c1 = document.getElementById('plot-gram-schmidt-3d');
+        if (c1 && c1.data) Plotly.Plots.resize(c1);
+        const c2 = document.getElementById('plot-custom-gs-3d');
+        if (c2 && c2.data) Plotly.Plots.resize(c2);
+    }));
+}
+
 // [2.7] 3D-Стенд: Ортогональная проекция на подпространство и Теорема Пифагора
 // -------------------------------------------------------------------------
 function renderOrthogonalProjection3D(y1 = 2, y2 = 3, y3 = 4) {
@@ -5394,7 +5843,7 @@ function latexToSpokenRussian(tex) {
     s = s.replace(/\\approx/g, ' приближённо равно ');
     s = s.replace(/\\times/g, ' на ');
     s = s.replace(/\\cdot/g, ' умножить на ');
-    s = s.replace(/\\pm/g, ' плюс-минус ');
+    s = s.replace(/\\pm/g, ' плюс минус ');
     s = s.replace(/\\to\b/g, ' в ');
     s = s.replace(/\\quad|\\qquad/g, ', ');
 
@@ -5423,7 +5872,7 @@ function latexToSpokenRussian(tex) {
     // Названия ключевых латинских переменных для чистого звучания
     s = s.replace(/\bu\b/g, 'у');
     s = s.replace(/\bv\b/g, 'вэ');
-    s = s.replace(/\bw\b/g, 'дубль-вэ');
+    s = s.replace(/\bw\b/g, 'дубль вэ');
     s = s.replace(/\bx\b/g, 'икс');
     s = s.replace(/\by\b/g, 'игрек');
     s = s.replace(/\bz\b/g, 'зет');
@@ -6122,10 +6571,10 @@ const DocxProcessor = {
             return `\\lim_{${this.ommlToLatex(lim)}} ${this.ommlToLatex(e)}`;
         }
 
-        if (tag === 'limUpp') {
+        if (tag === 'limUpp') { // Верхние пределы \limsup
             const e = Array.from(node.childNodes).find(c => (c.localName || c.nodeName.split(':').pop()) === 'e');
             const lim = Array.from(node.childNodes).find(c => (c.localName || c.nodeName.split(':').pop()) === 'lim');
-            return `\\max_{${this.ommlToLatex(lim)}} ${this.ommlToLatex(e)}`;
+            return `\\limsup_{${this.ommlToLatex(lim)}} ${this.ommlToLatex(e)}`;
         }
 
         if (tag === 'nary') { // Суммы, интегралы, произведения
