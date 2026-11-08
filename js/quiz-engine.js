@@ -1,23 +1,91 @@
 /**
- * Quiz Engine & Gated Learning System for PRIKLAD (Module 1).
- * Управляет пошаговым доступом к подмодулям через проверочные вопросы.
+ * Quiz Engine & Gated Learning System for PRIKLAD (Modules 1, 2, and 3).
+ * Управляет пошаговым доступом к подмодулям через проверочные вопросы (Checkpoints).
+ * Поддерживает:
+ * - Пул разнообразных вопросов для каждой темы (каждый раз случайный вопрос);
+ * - Жесткое закрепление вопроса и статуса при верном ответе (в LocalStorage);
+ * - Лаконичную обратную связь без подсказок-спойлеров («Неверно. Подумайте ещё раз!») + кнопка «Сменить вопрос ↻»;
+ * - Полную синхронизацию со всеми 3 модулями курса (Модули 1, 2 и 3).
  */
 
 (function () {
-    const STORAGE_KEY_UNLOCKED = 'priklad_mod1_unlocked';
-    const STORAGE_KEY_COMPLETED = 'priklad_mod1_completed';
+    const MODULE_CONFIGS = {
+        1: {
+            unlockedKey: 'priklad_mod1_unlocked',
+            completedKey: 'priklad_mod1_completed',
+            activeQKey: 'priklad_mod1_active_q',
+            defaultUnlocked: ['sec-intro', 'sec-1-1'],
+            allSections: [
+                'sec-intro', 'sec-1-1', 'sec-1-2', 'sec-1-3', 'sec-1-4',
+                'sec-1-5', 'sec-1-6', 'sec-1-7', 'sec-1-8', 'sec-1-9',
+                'sec-1-10', 'sec-quiz', 'sec-seminar', 'sec-lab'
+            ],
+            navGroupId: 'nav-group-mod1',
+            progressContainerId: 'mod1-progress-container',
+            progressTitle: 'Прогресс Модуля 1',
+            totalSubmodules: 10,
+            introSecId: 'sec-intro',
+            introNextTarget: 'sec-1-1',
+            introCardTitle: '🚀 Готовы перейти к материалу лекции?',
+            introCardDesc: 'Первая тема: От задачи к абстракции — признаковое пространство $\\mathbb{R}^d$ и модели ML',
+            introBtnText: 'Начать тему 1.1: Задача и абстракция →',
+            getQuizzes: () => (window.MODULE1_QUIZZES || {})
+        },
+        2: {
+            unlockedKey: 'priklad_mod2_unlocked',
+            completedKey: 'priklad_mod2_completed',
+            activeQKey: 'priklad_mod2_active_q',
+            defaultUnlocked: ['sec-2-intro', 'sec-2-1'],
+            allSections: [
+                'sec-2-intro', 'sec-2-1', 'sec-2-2', 'sec-2-3', 'sec-2-4',
+                'sec-2-5', 'sec-2-6', 'sec-2-7', 'sec-2-8', 'sec-2-9',
+                'sec-2-10', 'sec-2-quiz', 'sec-2-seminar', 'sec-2-lab'
+            ],
+            navGroupId: 'nav-group-mod2',
+            progressContainerId: 'mod2-progress-container',
+            progressTitle: 'Прогресс Модуля 2',
+            totalSubmodules: 10,
+            introSecId: 'sec-2-intro',
+            introNextTarget: 'sec-2-1',
+            introCardTitle: '🚀 Готовы перейти к материалу лекции?',
+            introCardDesc: 'Первая тема: Задача, абстракция и линейные системы $Ax = b$',
+            introBtnText: 'Начать тему 2.1: Задача и линейные системы →',
+            getQuizzes: () => (window.MODULE2_QUIZZES || {})
+        },
+        3: {
+            unlockedKey: 'priklad_mod3_unlocked',
+            completedKey: 'priklad_mod3_completed',
+            activeQKey: 'priklad_mod3_active_q',
+            defaultUnlocked: ['sec-3-intro', 'sec-3-1'],
+            allSections: [
+                'sec-3-intro', 'sec-3-1', 'sec-3-2', 'sec-3-3', 'sec-3-4',
+                'sec-3-5', 'sec-3-6', 'sec-3-7', 'sec-3-8', 'sec-3-9',
+                'sec-3-10', 'sec-3-11', 'sec-3-quiz', 'sec-3-seminar', 'sec-3-lab'
+            ],
+            navGroupId: 'nav-group-mod3',
+            progressContainerId: 'mod3-progress-container',
+            progressTitle: 'Прогресс Модуля 3',
+            totalSubmodules: 11,
+            introSecId: 'sec-3-intro',
+            introNextTarget: 'sec-3-1',
+            introCardTitle: '🚀 Готовы перейти к материалу лекции?',
+            introCardDesc: 'Первая тема: Мотивация сжатия данных и спектральная теория',
+            introBtnText: 'Начать тему 3.1: Зачем сжимать данные? →',
+            getQuizzes: () => (window.MODULE3_QUIZZES || {})
+        }
+    };
 
-    const DEFAULT_UNLOCKED = ['sec-intro', 'sec-1-1'];
-    const ALL_MOD1_SECTIONS = [
-        'sec-intro', 'sec-1-1', 'sec-1-2', 'sec-1-3', 'sec-1-4',
-        'sec-1-5', 'sec-1-6', 'sec-1-7', 'sec-1-8', 'sec-1-9',
-        'sec-1-10', 'sec-quiz', 'sec-seminar', 'sec-lab'
-    ];
+    function getModuleIdForSection(secId) {
+        if (!secId) return 1;
+        if (secId.startsWith('sec-2-') || secId === 'sec-2-intro') return 2;
+        if (secId.startsWith('sec-3-') || secId === 'sec-3-intro') return 3;
+        return 1;
+    }
 
-    function getQuizData() {
-        if (typeof window !== 'undefined' && window.MODULE1_QUIZZES) return window.MODULE1_QUIZZES;
-        if (typeof MODULE1_QUIZZES !== 'undefined') return MODULE1_QUIZZES;
-        return null;
+    function getQuizDataForSection(secId) {
+        const modId = getModuleIdForSection(secId);
+        const cfg = MODULE_CONFIGS[modId];
+        return cfg ? cfg.getQuizzes() : {};
     }
 
     // --- Надежный 2-этапный рендерер математических формул KaTeX ---
@@ -25,7 +93,6 @@
         if (!container) return;
 
         const execute = () => {
-            // 1. Попытка стандартного рендеринга через auto-render
             if (window.renderMathInElement) {
                 try {
                     window.renderMathInElement(container, {
@@ -42,8 +109,6 @@
                 }
             }
 
-            // 2. Гарантированный резервный проход через katex.renderToString
-            // Находит любые оставшиеся необработанные формулы $...$ и $$...$$
             if (window.katex && typeof window.katex.renderToString === 'function') {
                 const textNodes = [];
                 const walker = document.createTreeWalker(
@@ -119,38 +184,72 @@
         setTimeout(execute, 200);
     }
 
-    // --- 1. Работа с LocalStorage ---
+    // --- 1. Работа с LocalStorage для любого модуля ---
 
-    function getUnlockedSections() {
+    function getUnlockedSections(modId) {
+        const cfg = MODULE_CONFIGS[modId] || MODULE_CONFIGS[1];
         try {
-            const data = localStorage.getItem(STORAGE_KEY_UNLOCKED);
-            return data ? JSON.parse(data) : [...DEFAULT_UNLOCKED];
+            const data = localStorage.getItem(cfg.unlockedKey);
+            return data ? JSON.parse(data) : [...cfg.defaultUnlocked];
         } catch (e) {
-            return [...DEFAULT_UNLOCKED];
+            return [...cfg.defaultUnlocked];
         }
     }
 
-    function getCompletedQuizzes() {
+    function getCompletedQuizzes(modId) {
+        const cfg = MODULE_CONFIGS[modId] || MODULE_CONFIGS[1];
         try {
-            const data = localStorage.getItem(STORAGE_KEY_COMPLETED);
+            const data = localStorage.getItem(cfg.completedKey);
             return data ? JSON.parse(data) : [];
         } catch (e) {
             return [];
         }
     }
 
-    function saveProgress(unlocked, completed) {
+    function saveProgress(modId, unlocked, completed) {
+        const cfg = MODULE_CONFIGS[modId] || MODULE_CONFIGS[1];
         try {
-            localStorage.setItem(STORAGE_KEY_UNLOCKED, JSON.stringify(unlocked));
-            localStorage.setItem(STORAGE_KEY_COMPLETED, JSON.stringify(completed));
+            localStorage.setItem(cfg.unlockedKey, JSON.stringify(unlocked));
+            localStorage.setItem(cfg.completedKey, JSON.stringify(completed));
         } catch (e) {
-            console.warn('Не удалось сохранить прогресс:', e);
+            console.warn(`Не удалось сохранить прогресс для Модуля ${modId}:`, e);
         }
     }
 
+    function getActiveQuestions(modId) {
+        const cfg = MODULE_CONFIGS[modId] || MODULE_CONFIGS[1];
+        try {
+            const data = localStorage.getItem(cfg.activeQKey);
+            return data ? JSON.parse(data) : {};
+        } catch (e) {
+            return {};
+        }
+    }
+
+    function saveActiveQuestions(modId, data) {
+        const cfg = MODULE_CONFIGS[modId] || MODULE_CONFIGS[1];
+        try {
+            localStorage.setItem(cfg.activeQKey, JSON.stringify(data));
+        } catch (e) {
+            console.warn(`Не удалось сохранить активные вопросы для Модуля ${modId}:`, e);
+        }
+    }
+
+    function getQuestionPool(secData) {
+        if (!secData) return [];
+        if (Array.isArray(secData.pool) && secData.pool.length > 0) {
+            return secData.pool;
+        }
+        if (secData.question) {
+            return [secData];
+        }
+        return [];
+    }
+
     function unlockNextSection(currentSecId, nextSecId) {
-        const unlocked = getUnlockedSections();
-        const completed = getCompletedQuizzes();
+        const modId = getModuleIdForSection(currentSecId);
+        const unlocked = getUnlockedSections(modId);
+        const completed = getCompletedQuizzes(modId);
 
         if (!completed.includes(currentSecId)) {
             completed.push(currentSecId);
@@ -160,184 +259,246 @@
             unlocked.push(nextSecId);
         }
 
-        // Если сдан подмодуль 1.10 — разблокируем весь блок практики
+        // Если сдан финальный подпункт теории модуля — открываем практику
         if (currentSecId === 'sec-1-10') {
             ['sec-quiz', 'sec-seminar', 'sec-lab'].forEach(id => {
                 if (!unlocked.includes(id)) unlocked.push(id);
             });
+        } else if (currentSecId === 'sec-2-10') {
+            ['sec-2-quiz', 'sec-2-seminar', 'sec-2-lab'].forEach(id => {
+                if (!unlocked.includes(id)) unlocked.push(id);
+            });
+        } else if (currentSecId === 'sec-3-11') {
+            ['sec-3-quiz', 'sec-3-seminar', 'sec-3-lab'].forEach(id => {
+                if (!unlocked.includes(id)) unlocked.push(id);
+            });
         }
 
-        saveProgress(unlocked, completed);
+        saveProgress(modId, unlocked, completed);
         updateNavigationLocks();
         updateProgressBar();
     }
 
-    // --- 2. Обновление блокировок в навигации ---
+    // --- 2. Обновление блокировок в навигации для всех модулей ---
 
     function updateNavigationLocks() {
-        const unlocked = getUnlockedSections();
-        const completed = getCompletedQuizzes();
+        [1, 2, 3].forEach(modId => {
+            const cfg = MODULE_CONFIGS[modId];
+            const unlocked = getUnlockedSections(modId);
+            const completed = getCompletedQuizzes(modId);
 
-        const mod1Group = document.getElementById('nav-group-mod1');
-        if (!mod1Group) return;
+            const modGroup = document.getElementById(cfg.navGroupId);
+            if (!modGroup) return;
 
-        const navItems = mod1Group.querySelectorAll('.nav-item');
-        navItems.forEach(item => {
-            const target = item.getAttribute('data-target');
-            if (!target) return;
+            const navItems = modGroup.querySelectorAll('.nav-item');
+            navItems.forEach(item => {
+                const target = item.getAttribute('data-target');
+                if (!target) return;
 
-            let titleEl = item.querySelector('.nav-item-title');
-            if (!titleEl) {
+                // Проверяем, принадлежит ли этот пункт текущему модулю
+                if (getModuleIdForSection(target) !== modId) return;
+
+                let titleEl = item.querySelector('.nav-item-title');
+                if (!titleEl) {
+                    const oldBadge = item.querySelector('.nav-status-badge');
+                    if (oldBadge) oldBadge.remove();
+                    const rawText = item.textContent.replace(/[🔒•✓]/g, '').trim();
+                    item.innerHTML = `<span class="nav-item-title">${rawText}</span>`;
+                    titleEl = item.querySelector('.nav-item-title');
+                }
+
+                const isUnlocked = unlocked.includes(target);
+                const isCompleted = completed.includes(target);
+
                 const oldBadge = item.querySelector('.nav-status-badge');
                 if (oldBadge) oldBadge.remove();
-                const rawText = item.textContent.replace(/[🔒•✓]/g, '').trim();
-                item.innerHTML = `<span class="nav-item-title">${rawText}</span>`;
-                titleEl = item.querySelector('.nav-item-title');
-            }
 
-            const isUnlocked = unlocked.includes(target);
-            const isCompleted = completed.includes(target);
+                const badge = document.createElement('span');
+                badge.className = 'nav-status-badge';
 
-            const oldBadge = item.querySelector('.nav-status-badge');
-            if (oldBadge) oldBadge.remove();
-
-            const badge = document.createElement('span');
-            badge.className = 'nav-status-badge';
-
-            if (isUnlocked) {
-                item.classList.remove('locked');
-                if (isCompleted) {
-                    item.classList.add('completed');
-                    badge.textContent = '✓';
-                    badge.title = 'Подмодуль пройден';
-                    badge.className += ' badge-success';
+                if (isUnlocked) {
+                    item.classList.remove('locked');
+                    if (isCompleted) {
+                        item.classList.add('completed');
+                        badge.textContent = '✓';
+                        badge.title = 'Подмодуль пройден';
+                        badge.className += ' badge-success';
+                    } else {
+                        item.classList.remove('completed');
+                        badge.textContent = '•';
+                        badge.title = 'Доступно для изучения';
+                        badge.className += ' badge-open';
+                    }
                 } else {
+                    item.classList.add('locked');
                     item.classList.remove('completed');
-                    badge.textContent = '•';
-                    badge.title = 'Доступно для изучения';
-                    badge.className += ' badge-open';
+                    badge.textContent = '🔒';
+                    badge.title = 'Пройдите предыдущий подмодуль для разблокировки';
+                    badge.className += ' badge-locked';
                 }
-            } else {
-                item.classList.add('locked');
-                item.classList.remove('completed');
-                badge.textContent = '🔒';
-                badge.title = 'Пройдите предыдущий подмодуль для разблокировки';
-                badge.className += ' badge-locked';
-            }
 
-            item.appendChild(badge);
+                item.appendChild(badge);
+            });
         });
     }
 
-    // --- 3. Панель прогресса и инструменты преподавателя ---
+    // --- 3. Панель прогресса и инструменты преподавателя для каждого модуля ---
 
     function setupProgressSidebarUI() {
-        const mod1Group = document.getElementById('nav-group-mod1');
-        if (!mod1Group || document.getElementById('mod1-progress-container')) return;
+        [1, 2, 3].forEach(modId => {
+            const cfg = MODULE_CONFIGS[modId];
+            const modGroup = document.getElementById(cfg.navGroupId);
+            if (!modGroup || document.getElementById(cfg.progressContainerId)) return;
 
-        const progressContainer = document.createElement('div');
-        progressContainer.id = 'mod1-progress-container';
-        progressContainer.className = 'learning-progress-box';
-        progressContainer.innerHTML = `
-            <div class="progress-header">
-                <span class="progress-title">Прогресс Модуля 1</span>
-                <span id="mod1-progress-count" class="progress-counter">0 / 10</span>
-            </div>
-            <div class="progress-track-bg">
-                <div id="mod1-progress-fill" class="progress-track-fill" style="width: 0%;"></div>
-            </div>
-            <div class="teacher-tools">
-                <button id="btn-reset-mod1-progress" class="btn-tool-chip" title="Сбросить прогресс и начать сначала">Сбросить</button>
-                <button id="btn-unlock-all-mod1" class="btn-tool-chip" title="Открыть все разделы модуля (режим преподавателя)">Открыть всё 🔓</button>
-            </div>
-        `;
+            const progressContainer = document.createElement('div');
+            progressContainer.id = cfg.progressContainerId;
+            progressContainer.className = 'learning-progress-box';
+            progressContainer.innerHTML = `
+                <div class="progress-header">
+                    <span class="progress-title">${cfg.progressTitle}</span>
+                    <span id="mod${modId}-progress-count" class="progress-counter">0 / ${cfg.totalSubmodules}</span>
+                </div>
+                <div class="progress-track-bg">
+                    <div id="mod${modId}-progress-fill" class="progress-track-fill" style="width: 0%;"></div>
+                </div>
+                <div class="teacher-tools">
+                    <button id="btn-reset-mod${modId}-progress" class="btn-tool-chip" title="Сбросить прогресс Модуля ${modId} и начать сначала">Сбросить</button>
+                    <button id="btn-unlock-all-mod${modId}" class="btn-tool-chip" title="Открыть все разделы Модуля ${modId} (режим преподавателя)">Открыть всё 🔓</button>
+                </div>
+            `;
 
-        mod1Group.insertBefore(progressContainer, mod1Group.firstChild);
+            modGroup.insertBefore(progressContainer, modGroup.firstChild);
 
-        document.getElementById('btn-reset-mod1-progress')?.addEventListener('click', () => {
-            if (confirm('Сбросить прогресс Модуля 1 и начать с темы 1.1?')) {
-                saveProgress([...DEFAULT_UNLOCKED], []);
+            document.getElementById(`btn-reset-mod${modId}-progress`)?.addEventListener('click', () => {
+                if (confirm(`Сбросить прогресс Модуля ${modId} и начать сначала?`)) {
+                    saveProgress(modId, [...cfg.defaultUnlocked], []);
+                    try {
+                        localStorage.removeItem(cfg.activeQKey);
+                    } catch (e) {}
+                    updateNavigationLocks();
+                    updateProgressBar();
+                    refreshAllQuizWidgets();
+                    const firstNav = modGroup.querySelector(`.nav-item[data-target="${cfg.defaultUnlocked[1]}"]`);
+                    firstNav?.click();
+                }
+            });
+
+            document.getElementById(`btn-unlock-all-mod${modId}`)?.addEventListener('click', () => {
+                const quizzes = cfg.getQuizzes();
+                saveProgress(modId, [...cfg.allSections], Object.keys(quizzes));
                 updateNavigationLocks();
                 updateProgressBar();
                 refreshAllQuizWidgets();
-                const firstNav = mod1Group.querySelector('.nav-item[data-target="sec-1-1"]');
-                firstNav?.click();
-            }
-        });
-
-        document.getElementById('btn-unlock-all-mod1')?.addEventListener('click', () => {
-            saveProgress([...ALL_MOD1_SECTIONS], Object.keys(getQuizData() || {}));
-            updateNavigationLocks();
-            updateProgressBar();
-            refreshAllQuizWidgets();
+            });
         });
     }
 
     function updateProgressBar() {
-        const completed = getCompletedQuizzes();
-        const totalSubmodules = 10;
-        const count = completed.length;
-        const percent = Math.min(100, Math.round((count / totalSubmodules) * 100));
+        [1, 2, 3].forEach(modId => {
+            const cfg = MODULE_CONFIGS[modId];
+            const completed = getCompletedQuizzes(modId);
+            const count = completed.length;
+            const percent = Math.min(100, Math.round((count / cfg.totalSubmodules) * 100));
 
-        const counterEl = document.getElementById('mod1-progress-count');
-        const fillEl = document.getElementById('mod1-progress-fill');
+            const counterEl = document.getElementById(`mod${modId}-progress-count`);
+            const fillEl = document.getElementById(`mod${modId}-progress-fill`);
 
-        if (counterEl) counterEl.textContent = `${count} / ${totalSubmodules} (${percent}%)`;
-        if (fillEl) fillEl.style.width = `${percent}%`;
-    }
-
-    // --- 4. Кнопка перехода в конце вводного раздела sec-intro ---
-
-    function setupIntroNextButton() {
-        const introSec = document.getElementById('sec-intro');
-        if (!introSec || introSec.querySelector('.intro-next-step-card')) return;
-
-        const card = document.createElement('div');
-        card.className = 'intro-next-step-card';
-        card.innerHTML = `
-            <div class="intro-next-info">
-                <h3>🚀 Готовы перейти к материалу лекции?</h3>
-                <p>Первая тема: От задачи к абстракции — признаковое пространство $\\mathbb{R}^d$ и модели ML</p>
-            </div>
-            <button id="btn-start-mod1-lesson" class="btn-start-course">
-                Начать тему 1.1: Задача и абстракция →
-            </button>
-        `;
-        introSec.appendChild(card);
-
-        card.querySelector('#btn-start-mod1-lesson')?.addEventListener('click', () => {
-            const nav11 = document.querySelector('.nav-item[data-target="sec-1-1"]');
-            if (nav11) nav11.click();
+            if (counterEl) counterEl.textContent = `${count} / ${cfg.totalSubmodules} (${percent}%)`;
+            if (fillEl) fillEl.style.width = `${percent}%`;
         });
-
-        renderAllMathIn(card);
     }
 
-    // --- 5. Отрисовка интерактивных карточек вопросов ---
+    // --- 4. Кнопки перехода в конце вводных разделов sec-intro, sec-2-intro, sec-3-intro ---
+
+    function setupIntroNextButtons() {
+        [1, 2, 3].forEach(modId => {
+            const cfg = MODULE_CONFIGS[modId];
+            const introSec = document.getElementById(cfg.introSecId);
+            if (!introSec || introSec.querySelector(`.intro-next-step-card-mod${modId}`)) return;
+
+            const card = document.createElement('div');
+            card.className = `intro-next-step-card intro-next-step-card-mod${modId}`;
+            card.innerHTML = `
+                <div class="intro-next-info">
+                    <h3>${cfg.introCardTitle}</h3>
+                    <p>${cfg.introCardDesc}</p>
+                </div>
+                <button id="btn-start-mod${modId}-lesson" class="btn-start-course">
+                    ${cfg.introBtnText}
+                </button>
+            `;
+            introSec.appendChild(card);
+
+            card.querySelector(`#btn-start-mod${modId}-lesson`)?.addEventListener('click', () => {
+                const nav = document.querySelector(`.nav-item[data-target="${cfg.introNextTarget}"]`);
+                if (nav) nav.click();
+            });
+
+            renderAllMathIn(card);
+        });
+    }
+
+    // --- 5. Отрисовка интерактивных карточек вопросов (Checkpoints) ---
 
     function renderQuizForSection(secId) {
-        const quizzes = getQuizData();
+        const modId = getModuleIdForSection(secId);
+        const quizzes = getQuizDataForSection(secId);
         if (!quizzes || !quizzes[secId]) return;
 
         const secEl = document.getElementById(secId);
         if (!secEl) return;
 
-        let card = secEl.querySelector('.quiz-gate-card');
-        const data = quizzes[secId];
-        const completed = getCompletedQuizzes();
+        const secData = quizzes[secId];
+        const pool = getQuestionPool(secData);
+        if (pool.length === 0) return;
+
+        const completed = getCompletedQuizzes(modId);
         const isPassed = completed.includes(secId);
 
-        if (!card) {
+        const activeMap = getActiveQuestions(modId);
+        let saved = activeMap[secId];
+
+        let qIndex = 0;
+        if (isPassed) {
+            // Если подмодуль сдан — используем сохраненный закрепленный вопрос
+            if (saved && typeof saved.qIndex === 'number' && saved.qIndex >= 0 && saved.qIndex < pool.length) {
+                qIndex = saved.qIndex;
+            } else {
+                qIndex = 0;
+            }
+        } else {
+            // Если еще не сдан — проверяем, выбран ли уже вопрос
+            if (saved && typeof saved.qIndex === 'number' && saved.qIndex >= 0 && saved.qIndex < pool.length && !saved.isPassed) {
+                qIndex = saved.qIndex;
+            } else {
+                // Выбираем случайный вопрос из пула
+                qIndex = Math.floor(Math.random() * pool.length);
+                activeMap[secId] = { qIndex: qIndex, isPassed: false };
+                saveActiveQuestions(modId, activeMap);
+            }
+        }
+
+        const currentQ = pool[qIndex];
+        let card = secEl.querySelector('.quiz-gate-card');
+
+        // Проверяем, отображается ли в карточке именно текущий вопрос (qIndex)
+        const currentCardQIndex = card ? parseInt(card.getAttribute('data-qindex'), 10) : -1;
+
+        if (!card || currentCardQIndex !== qIndex) {
+            if (card) card.remove();
+
             card = document.createElement('div');
             card.className = 'quiz-gate-card';
             card.id = `gate-card-${secId}`;
+            card.setAttribute('data-qindex', qIndex);
+
             card.innerHTML = `
                 <div class="quiz-gate-header">
                     <h3 class="quiz-gate-title">Вопрос для перехода к следующему разделу</h3>
                 </div>
-                <div class="quiz-gate-question">${data.question}</div>
+                <div class="quiz-gate-question">${currentQ.question}</div>
                 <div class="quiz-options-list">
-                    ${data.options.map((opt, i) => `
+                    ${currentQ.options.map((opt, i) => `
                         <label class="quiz-option-label" data-index="${i}">
                             <input type="radio" name="quiz_choice_${secId}" value="${i}">
                             <span class="quiz-option-marker">${String.fromCharCode(65 + i)}</span>
@@ -350,8 +511,13 @@
                     <button class="btn-quiz-check" id="btn-check-${secId}">
                         <span>Проверить ответ</span>
                     </button>
+                    ${pool.length > 1 && !isPassed ? `
+                        <button class="btn-tool-chip btn-quiz-retry" id="btn-retry-${secId}" style="display:none; padding:0.75rem 1.1rem; font-size:0.88rem;" title="Попробовать другой вопрос из темы">
+                            <span>Сменить вопрос ↻</span>
+                        </button>
+                    ` : ''}
                     <button class="btn-quiz-next" id="btn-next-${secId}">
-                        <span>Перейти к ${data.nextTitle} →</span>
+                        <span>Перейти к ${secData.nextTitle} →</span>
                     </button>
                 </div>
             `;
@@ -360,9 +526,10 @@
 
             const btnCheck = card.querySelector(`#btn-check-${secId}`);
             const btnNext = card.querySelector(`#btn-next-${secId}`);
+            const btnRetry = card.querySelector(`#btn-retry-${secId}`);
             const feedback = card.querySelector(`#feedback_${secId}`);
 
-            btnCheck.addEventListener('click', () => {
+            btnCheck?.addEventListener('click', () => {
                 const checkedRadio = card.querySelector(`input[name="quiz_choice_${secId}"]:checked`);
                 if (!checkedRadio) {
                     feedback.className = 'quiz-feedback error';
@@ -372,33 +539,58 @@
 
                 const selectedIdx = parseInt(checkedRadio.value, 10);
                 const allLabels = card.querySelectorAll('.quiz-option-label');
-
                 allLabels.forEach(l => l.classList.remove('option-correct', 'option-wrong'));
 
-                if (selectedIdx === data.correctIndex) {
+                if (selectedIdx === currentQ.correctIndex) {
+                    // Верно! ЗАКРЕПЛЯЕМ вопрос и ответ
                     allLabels[selectedIdx].classList.add('option-correct');
                     feedback.className = 'quiz-feedback success';
                     feedback.innerHTML = `
                         <strong>Абсолютно верно!</strong><br>
                         Следующий подмодуль разблокирован!
                     `;
-                    btnNext.classList.add('visible');
+                    btnNext?.classList.add('visible');
+                    if (btnRetry) btnRetry.style.display = 'none';
+
+                    // Сохраняем закрепленный вопрос в activeMap
+                    const map = getActiveQuestions(modId);
+                    map[secId] = { qIndex: qIndex, selectedIdx: selectedIdx, isPassed: true };
+                    saveActiveQuestions(modId, map);
+
+                    // Блокируем радио-кнопки
+                    card.querySelectorAll('input[type="radio"]').forEach(r => r.disabled = true);
+                    btnCheck.disabled = true;
+                    btnCheck.style.opacity = '0.6';
+                    btnCheck.style.cursor = 'default';
+
                     renderAllMathIn(feedback);
-                    unlockNextSection(secId, data.nextSectionId);
+                    unlockNextSection(secId, secData.nextSectionId);
                 } else {
+                    // Неверно! БЕЗ ПОДСКАЗОК - только лаконичное напоминание
                     allLabels[selectedIdx].classList.add('option-wrong');
                     feedback.className = 'quiz-feedback error';
-                    feedback.innerHTML = `
-                        <strong>Неверно.</strong> Подумайте ещё раз!<br>
-                        <div class="quiz-hint-box"><b>Подсказка:</b> ${data.hint}</div>
-                    `;
-                    btnNext.classList.remove('visible');
+                    feedback.innerHTML = `<strong>Неверно.</strong> Подумайте ещё раз!`;
+                    btnNext?.classList.remove('visible');
+
+                    // Показываем кнопку смены вопроса, если в пуле есть альтернативные вопросы
+                    if (btnRetry && pool.length > 1) {
+                        btnRetry.style.display = 'inline-flex';
+                    }
                     renderAllMathIn(feedback);
                 }
             });
 
-            btnNext.addEventListener('click', () => {
-                const targetNav = document.querySelector(`.nav-item[data-target="${data.nextSectionId}"]`);
+            btnRetry?.addEventListener('click', () => {
+                // Выбираем другой вопрос из пула
+                const map = getActiveQuestions(modId);
+                let nextIdx = (qIndex + 1 + Math.floor(Math.random() * (pool.length - 1))) % pool.length;
+                map[secId] = { qIndex: nextIdx, isPassed: false };
+                saveActiveQuestions(modId, map);
+                renderQuizForSection(secId);
+            });
+
+            btnNext?.addEventListener('click', () => {
+                const targetNav = document.querySelector(`.nav-item[data-target="${secData.nextSectionId}"]`);
                 if (targetNav) {
                     targetNav.click();
                 }
@@ -409,23 +601,38 @@
 
         const feedback = card.querySelector(`#feedback_${secId}`);
         const btnNext = card.querySelector(`#btn-next-${secId}`);
-        const correctRadio = card.querySelector(`input[value="${data.correctIndex}"]`);
+        const btnCheck = card.querySelector(`#btn-check-${secId}`);
+        const btnRetry = card.querySelector(`#btn-retry-${secId}`);
+        const correctRadio = card.querySelector(`input[value="${currentQ.correctIndex}"]`);
         const allLabels = card.querySelectorAll('.quiz-option-label');
 
         if (isPassed) {
             if (correctRadio) correctRadio.checked = true;
             allLabels.forEach((l, idx) => {
-                if (idx === data.correctIndex) l.classList.add('option-correct');
+                if (idx === currentQ.correctIndex) l.classList.add('option-correct');
                 else l.classList.remove('option-correct', 'option-wrong');
             });
+            card.querySelectorAll('input[type="radio"]').forEach(r => r.disabled = true);
+            if (btnCheck) {
+                btnCheck.disabled = true;
+                btnCheck.style.opacity = '0.6';
+                btnCheck.style.cursor = 'default';
+            }
+            if (btnRetry) btnRetry.style.display = 'none';
+
             feedback.className = 'quiz-feedback success';
             feedback.innerHTML = `
-                <strong>✓ Пройдено!</strong> Раздел <em>«${data.nextTitle}»</em> разблокирован.
+                <strong>✓ Пройдено!</strong> Раздел <em>«${secData.nextTitle}»</em> разблокирован.
             `;
-            btnNext.classList.add('visible');
+            btnNext?.classList.add('visible');
             renderAllMathIn(feedback);
         } else {
-            btnNext.classList.remove('visible');
+            btnNext?.classList.remove('visible');
+            if (btnCheck) {
+                btnCheck.disabled = false;
+                btnCheck.style.opacity = '1';
+                btnCheck.style.cursor = 'pointer';
+            }
             if (!card.querySelector(`input[name="quiz_choice_${secId}"]:checked`)) {
                 feedback.className = 'quiz-feedback';
                 feedback.innerHTML = '';
@@ -436,20 +643,19 @@
     }
 
     function refreshAllQuizWidgets() {
-        const quizzes = getQuizData();
-        if (!quizzes) return;
-        Object.keys(quizzes).forEach(secId => {
-            renderQuizForSection(secId);
+        [1, 2, 3].forEach(modId => {
+            const cfg = MODULE_CONFIGS[modId];
+            const quizzes = cfg.getQuizzes();
+            Object.keys(quizzes).forEach(secId => {
+                renderQuizForSection(secId);
+            });
         });
     }
 
     // --- 6. Защита кликов по заблокированным пунктам в меню ---
 
     function interceptNavigationClicks() {
-        const mod1Group = document.getElementById('nav-group-mod1');
-        if (!mod1Group) return;
-
-        mod1Group.addEventListener('click', (e) => {
+        document.body.addEventListener('click', (e) => {
             const item = e.target.closest('.nav-item');
             if (!item) return;
 
@@ -484,12 +690,12 @@
 
     function initQuizSystem() {
         setupProgressSidebarUI();
-        setupIntroNextButton();
+        setupIntroNextButtons();
         updateNavigationLocks();
         updateProgressBar();
         refreshAllQuizWidgets();
-        setTimeout(refreshAllQuizWidgets, 80);
-        setTimeout(refreshAllQuizWidgets, 400);
+        setTimeout(refreshAllQuizWidgets, 100);
+        setTimeout(refreshAllQuizWidgets, 500);
         interceptNavigationClicks();
 
         // Обновляем виджеты и рендерим формулы при смене раздела
@@ -503,6 +709,17 @@
                 }, 60);
             });
         });
+
+        // Слушаем переключение модулей
+        document.querySelectorAll('.btn-module-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                setTimeout(() => {
+                    updateNavigationLocks();
+                    updateProgressBar();
+                    refreshAllQuizWidgets();
+                }, 80);
+            });
+        });
     }
 
     if (document.readyState === 'loading') {
@@ -512,14 +729,29 @@
     }
 
     window.PrikladQuizEngine = {
-        unlockAll: () => {
-            saveProgress([...ALL_MOD1_SECTIONS], Object.keys(getQuizData() || {}));
+        unlockAll: (modId) => {
+            const targetMods = modId ? [modId] : [1, 2, 3];
+            targetMods.forEach(m => {
+                const cfg = MODULE_CONFIGS[m];
+                if (cfg) {
+                    saveProgress(m, [...cfg.allSections], Object.keys(cfg.getQuizzes()));
+                }
+            });
             updateNavigationLocks();
             updateProgressBar();
             refreshAllQuizWidgets();
         },
-        reset: () => {
-            saveProgress([...DEFAULT_UNLOCKED], []);
+        reset: (modId) => {
+            const targetMods = modId ? [modId] : [1, 2, 3];
+            targetMods.forEach(m => {
+                const cfg = MODULE_CONFIGS[m];
+                if (cfg) {
+                    saveProgress(m, [...cfg.defaultUnlocked], []);
+                    try {
+                        localStorage.removeItem(cfg.activeQKey);
+                    } catch (e) {}
+                }
+            });
             updateNavigationLocks();
             updateProgressBar();
             refreshAllQuizWidgets();

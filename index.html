@@ -3740,7 +3740,44 @@
                 <br><br>
                 Геометрически образ единичной сферы $S^{n-1}$ под действием симметричной матрицы представляет собой <b>эллипсоид</b>, полуоси которого направлены строго вдоль собственных векторов $q_i$, а длины полуосей равны $|\lambda_i|$.
             </div>
-        </section>
+        
+            <div class="callout callout-proof" style="margin-top:1.2rem;">
+                <div class="callout-title">Пример вычислений: Полное спектральное разложение симметричной матрицы</div>
+                Рассмотрим симметричную матрицу $A = \begin{pmatrix} 3 & 1 \\ 1 & 3 \end{pmatrix} = A^T$.
+                Построим её ортонормированный собственный базис, проверим ортогональность и факторизацию $A = Q \Lambda Q^T = \lambda_1 P_1 + \lambda_2 P_2$.
+                <br><br>
+                <b>Шаг 1. Характеристическое уравнение и спектр:</b>
+                $$\det(A - \lambda I) = \begin{vmatrix} 3 - \lambda & 1 \\ 1 & 3 - \lambda \end{vmatrix} = (3 - \lambda)^2 - 1 = \lambda^2 - 6\lambda + 8 = (\lambda - 4)(\lambda - 2) = 0$$
+                Собственные значения вещественны и различны: $\lambda_1 = 4$, $\lambda_2 = 2$.
+                <br><br>
+                <b>Шаг 2. Поиск собственных векторов и нормировка:</b>
+                <ul style="margin-left:1.4rem; margin-top:0.3rem;">
+                    <li>Для $\lambda_1 = 4$:
+                        $$(A - 4I) v_1 = \begin{pmatrix} -1 & 1 \\ 1 & -1 \end{pmatrix} \begin{pmatrix} x_1 \\ x_2 \end{pmatrix} = \begin{pmatrix} 0 \\ 0 \end{pmatrix} \implies -x_1 + x_2 = 0 \implies v_1 = \begin{pmatrix} 1 \\ 1 \end{pmatrix}$$
+                        Нормируем вектор: $\|v_1\|_2 = \sqrt{1^2 + 1^2} = \sqrt{2} \implies q_1 = \frac{1}{\sqrt{2}} \begin{pmatrix} 1 \\ 1 \end{pmatrix}$.
+                    </li>
+                    <li style="margin-top:0.4rem;">Для $\lambda_2 = 2$:
+                        $$(A - 2I) v_2 = \begin{pmatrix} 1 & 1 \\ 1 & 1 \end{pmatrix} \begin{pmatrix} x_1 \\ x_2 \end{pmatrix} = \begin{pmatrix} 0 \\ 0 \end{pmatrix} \implies x_1 + x_2 = 0 \implies v_2 = \begin{pmatrix} -1 \\ 1 \end{pmatrix}$$
+                        Нормируем вектор: $\|v_2\|_2 = \sqrt{(-1)^2 + 1^2} = \sqrt{2} \implies q_2 = \frac{1}{\sqrt{2}} \begin{pmatrix} -1 \\ 1 \end{pmatrix}$.
+                    </li>
+                </ul>
+                <br>
+                <b>Шаг 3. Проверка ортогональности и матрицы $Q$:</b>
+                $$\langle q_1, q_2 \rangle = \frac{1}{\sqrt{2}} \cdot \left(-\frac{1}{\sqrt{2}}\right) + \frac{1}{\sqrt{2}} \cdot \frac{1}{\sqrt{2}} = -\frac{1}{2} + \frac{1}{2} = 0$$
+                Составляем ортогональную матрицу перехода $Q = [q_1 \mid q_2]$:
+                $$Q = \frac{1}{\sqrt{2}} \begin{pmatrix} 1 & -1 \\ 1 & 1 \end{pmatrix}, \qquad Q^T Q = \frac{1}{2} \begin{pmatrix} 1 & 1 \\ -1 & 1 \end{pmatrix} \begin{pmatrix} 1 & -1 \\ 1 & 1 \end{pmatrix} = \begin{pmatrix} 1 & 0 \\ 0 & 1 \end{pmatrix} = I$$
+                <br>
+                <b>Шаг 4. Спектральная факторизация $A = Q \Lambda Q^T$:</b>
+                $$Q \Lambda Q^T = \frac{1}{\sqrt{2}} \begin{pmatrix} 1 & -1 \\ 1 & 1 \end{pmatrix} \begin{pmatrix} 4 & 0 \\ 0 & 2 \end{pmatrix} \frac{1}{\sqrt{2}} \begin{pmatrix} 1 & 1 \\ -1 & 1 \end{pmatrix} = \frac{1}{2} \begin{pmatrix} 4 & -2 \\ 4 & 2 \end{pmatrix} \begin{pmatrix} 1 & 1 \\ -1 & 1 \end{pmatrix} = \begin{pmatrix} 3 & 1 \\ 1 & 3 \end{pmatrix} = A$$
+                <br>
+                <b>Шаг 5. Разложение по ортогональным проекторам ранга 1:</b>
+                $$P_1 = q_1 q_1^T = \frac{1}{2} \begin{pmatrix} 1 \\ 1 \end{pmatrix} \begin{pmatrix} 1 & 1 \end{pmatrix} = \frac{1}{2} \begin{pmatrix} 1 & 1 \\ 1 & 1 \end{pmatrix}, \qquad P_2 = q_2 q_2^T = \frac{1}{2} \begin{pmatrix} -1 \\ 1 \end{pmatrix} \begin{pmatrix} -1 & 1 \end{pmatrix} = \frac{1}{2} \begin{pmatrix} 1 & -1 \\ -1 & 1 \end{pmatrix}$$
+                $$A = 4 P_1 + 2 P_2 = 2 \begin{pmatrix} 1 & 1 \\ 1 & 1 \end{pmatrix} + \begin{pmatrix} 1 & -1 \\ -1 & 1 \end{pmatrix} = \begin{pmatrix} 3 & 1 \\ 1 & 3 \end{pmatrix}$$
+                <div style="font-size:0.9rem; color:var(--text-secondary); margin-top:0.6rem; padding:0.6rem 0.8rem; background:rgba(0,0,0,0.02); border-left:3px solid var(--accent-primary); border-radius:4px;">
+                    <b>Геометрический вывод:</b> Оператор $A$ растягивает плоскость вдоль направления $q_1 = (1/\sqrt{2}, 1/\sqrt{2})^T$ в 4 раза, а вдоль перпендикулярного направления $q_2 = (-1/\sqrt{2}, 1/\sqrt{2})^T$ — в 2 раза. Образом единичного круга является эллипс с главными полуосями $a = 4$ и $b = 2$, повёрнутый на угол $45^\circ$.
+                </div>
+            </div>
+</section>
 
         <!-- 3.5: Квадратичные формы и положительная определённость -->
         <section id="sec-3-5" class="content-section">
@@ -3798,7 +3835,50 @@
                     <li>$\nabla^2 L(w)$ знаконеопределена — стационарная точка является <b>седловой</b> (градиентный спуск застревает вдоль нулевых направлений).</li>
                 </ul>
             </div>
-        </section>
+        
+            <div class="callout callout-proof" style="margin-top:1.2rem;">
+                <div class="callout-title">Пример вычислений: Исследование квадратичной формы и приведение к каноническому виду</div>
+                Пусть задана квадратичная форма от двух переменных:
+                $$q(x_1, x_2) = 5x_1^2 - 4x_1 x_2 + 2x_2^2$$
+                Исследуем её знакоопределённость критерием Сильвестра и спектральным методом, затем найдём ортогональную замену координат для канонического вида.
+                <br><br>
+                <b>Шаг 1. Матрица квадратичной формы:</b>
+                Коэффициенты при квадратах стоят на главной диагонали, а перекрёстный коэффициент $(-4)$ делится поровну между симметричными элементами $A_{12} = A_{21} = -2$:
+                $$A = \begin{pmatrix} 5 & -2 \\ -2 & 2 \end{pmatrix} = A^T$$
+                <br>
+                <b>Шаг 2. Метод 1: Критерий Сильвестра (через угловые миноры):</b>
+                <ul style="margin-left:1.4rem; margin-top:0.3rem;">
+                    <li>Первый угловой минор: $\Delta_1 = 5 > 0$.</li>
+                    <li>Второй угловой минор (определитель матрицы):
+                        $$\Delta_2 = \det(A) = 5 \cdot 2 - (-2) \cdot (-2) = 10 - 4 = 6 > 0$$
+                    </li>
+                </ul>
+                Так как все ведущие главные миноры строго положительны ($\Delta_1 > 0, \Delta_2 > 0$), по критерию Сильвестра форма <b>строго положительно определена</b>: $A \succ 0$. Для любого ненулевого вектора $(x_1, x_2) \neq (0, 0)$ значение $q(x) > 0$.
+                <br><br>
+                <b>Шаг 3. Метод 2: Спектральный анализ (собственные значения):</b>
+                $$\det(A - \lambda I) = (5 - \lambda)(2 - \lambda) - 4 = \lambda^2 - 7\lambda + 6 = (\lambda - 6)(\lambda - 1) = 0$$
+                Собственные значения: $\lambda_1 = 6 > 0$, $\lambda_2 = 1 > 0$.
+                Оба собственных значения строго положительны — это второе строгое доказательство того, что $A \succ 0$.
+                <br><br>
+                <b>Шаг 4. Приведение к каноническому виду через ортогональную замену $x = Q y$:</b>
+                Нормированные собственные векторы:
+                $$q_1 = \frac{1}{\sqrt{5}} \begin{pmatrix} 2 \\ -1 \end{pmatrix}, \qquad q_2 = \frac{1}{\sqrt{5}} \begin{pmatrix} 1 \\ 2 \end{pmatrix}, \qquad Q = \frac{1}{\sqrt{5}} \begin{pmatrix} 2 & 1 \\ -1 & 2 \end{pmatrix}$$
+                Выполняя ортогональную замену переменных $x = Q y \iff y = Q^T x$:
+                $$q(x) = y^T (Q^T A Q) y = y^T \begin{pmatrix} 6 & 0 \\ 0 & 1 \end{pmatrix} y = 6 y_1^2 + y_2^2$$
+                В новых координатах $(y_1, y_2)$ перекрёстное слагаемое исчезло. Линии уровня $6 y_1^2 + y_2^2 = C > 0$ представляют собой семейство соосных концентрических эллипсов.
+                <br><br>
+                <b>Контрастный пример: Знаконеопределённая форма (седловая точка в ML):</b>
+                Рассмотрим форму $g(x_1, x_2) = x_1^2 + 4x_1 x_2 + x_2^2$ с матрицей $B = \begin{pmatrix} 1 & 2 \\ 2 & 1 \end{pmatrix}$.
+                <ul style="margin-left:1.4rem; margin-top:0.3rem;">
+                    <li>Миноры: $\Delta_1 = 1 > 0$, но $\Delta_2 = 1 - 4 = -3 < 0$. Критерий Сильвестра нарушен.</li>
+                    <li>Собственные значения: $\det(B - \lambda I) = (1 - \lambda)^2 - 4 = 0 \implies \lambda_1 = 3 > 0, \; \lambda_2 = -1 < 0$.</li>
+                    <li>Канонический вид: $g(y) = 3 y_1^2 - y_2^2$.</li>
+                </ul>
+                <div style="font-size:0.9rem; color:var(--text-secondary); margin-top:0.6rem; padding:0.6rem 0.8rem; background:rgba(0,0,0,0.02); border-left:3px solid var(--accent-primary); border-radius:4px;">
+                    <b>Вывод для машинного обучения:</b> Если матрица вторых производных (Гессиан $\nabla^2 L$) в точке нулевого градиента равна $A$, то алгоритм оптимизации находится в <b>строгом локальном минимуме</b> (функция локально чашеобразна во всех направлениях). Если же Гессиан равен $B$, точка является <b>седловой</b>: вдоль направления $y_1$ функция растёт ($+3 y_1^2$), а вдоль $y_2$ — убывает ($-y_2^2$).
+                </div>
+            </div>
+</section>
 
         <!-- 3.6: Сингулярное разложение (SVD) -->
         <section id="sec-3-6" class="content-section">
@@ -3843,20 +3923,23 @@
                 Произведение $U \Sigma V^T$ в точности восстанавливает матрицу $A$.
             </div>
 
-            <!-- Интерактивный стенд: SVD 4 шага -->
+            <!-- Интерактивный стенд: SVD 4 шага (Визуализация примера из лекции) -->
             <div class="interactive-card" style="margin-top:1.5rem;">
                 <div class="card-title-row">
-                    <h3>Интерактивная анатомия SVD: Декомпозиция отображения в 4 шага</h3>
-                    <span class="badge">SVD 4-Step Pipeline</span>
+                    <h3>Интерактивная визуализация примера из лекции: SVD в 4 шага</h3>
+                    <span class="badge">SVD: A = U Σ Vᵀ</span>
                 </div>
-                <p style="font-size:0.92rem; color:var(--text-muted); margin-bottom:1rem;">
-                    Любая матрица $A$ действует как трёхстадийная геометрическая трансформация: поворот $V^T$, масштаб вдоль осей на $\sigma_i$ и поворот $U$. Переключайте шаги кнопками и наблюдайте деформацию единичной окружности:
+                <p style="font-size:0.92rem; color:var(--text-muted); margin-bottom:0.8rem;">
+                    Пошаговая геометрическая декомпозиция для матрицы из лекции $A = \begin{pmatrix} -2 & 2 \\ 2 & 1 \end{pmatrix}$. Переключайте шаги кнопками и наблюдайте, как поворот $V^T$, масштаб $\Sigma$ на $\sigma_1 = 3, \; \sigma_2 = 2$ и поворот $U$ трансформируют единичный круг в итоговый эллипс $A(S^1)$:
                 </p>
+                <div style="margin: 0.6rem 0 1rem 0; padding: 0.65rem 0.95rem; background: var(--bg-main, #faf8f5); border: 1px solid var(--border-color, #e6ded7); border-radius: 8px; font-size: 0.9rem; line-height: 1.6;">
+                    <b>Матрицы факторизации $A = U \Sigma V^T$:</b> $\quad A = \begin{pmatrix} -2 & 2 \\ 2 & 1 \end{pmatrix}$, $\quad \Sigma = \begin{pmatrix} 3 & 0 \\ 0 & 2 \end{pmatrix}$, $\quad V = \frac{1}{\sqrt{5}}\begin{pmatrix} -2 & 1 \\ 1 & 2 \end{pmatrix}$, $\quad U = \frac{1}{\sqrt{5}}\begin{pmatrix} 2 & 1 \\ -1 & 2 \end{pmatrix}$.
+                </div>
                 <div class="controls-grid" style="align-items:center;">
                     <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
                         <button class="btn btn-secondary" id="btn-svd-step0">Шаг 0: Круг $S^1$ и векторы $v_1, v_2$</button>
                         <button class="btn btn-secondary" id="btn-svd-step1">Шаг 1: Поворот $V^T$</button>
-                        <button class="btn btn-secondary" id="btn-svd-step2">Шаг 2: Растяжение $\Sigma$</button>
+                        <button class="btn btn-secondary" id="btn-svd-step2">Шаг 2: Растяжение $\Sigma$ ($\sigma_1=3, \sigma_2=2$)</button>
                         <button class="btn btn-primary" id="btn-svd-step3">Шаг 3: Поворот $U$ ($A = U\Sigma V^T$)</button>
                     </div>
                 </div>

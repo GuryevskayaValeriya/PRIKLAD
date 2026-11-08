@@ -3977,41 +3977,41 @@ function runCustomGramSchmidt() {
         }
     }
 
-    // Ортонормированные векторы q1, q2, q3 (крупные и отчетливые)
+    // Ортонормированные векторы q1, q2, q3 (в оттенках кофейной палитры)
     if (q1) {
         traces.push({
             type: 'scatter3d', mode: 'lines+markers+text',
             x: [0, q1[0]], y: [0, q1[1]], z: [0, q1[2]],
-            line: { color: '#2e7d32', width: 8 },
-            marker: { size: [0, 10], color: '#2e7d32' },
+            line: { color: '#362217', width: 8 },
+            marker: { size: [0, 10], color: '#362217' },
             text: ['', `  <b>q₁</b> ${fmtVec(q1)}`],
             textposition: 'top right',
-            textfont: { size: 15, color: '#1b5e20', family: 'Inter, sans-serif' },
-            name: 'ОНБ q₁'
+            textfont: { size: 15, color: '#24140b', family: 'Inter, sans-serif' },
+            name: 'ОНБ q₁ (эспрессо)'
         });
     }
     if (q2) {
         traces.push({
             type: 'scatter3d', mode: 'lines+markers+text',
             x: [0, q2[0]], y: [0, q2[1]], z: [0, q2[2]],
-            line: { color: '#1565c0', width: 8 },
-            marker: { size: [0, 10], color: '#1565c0' },
+            line: { color: '#784c28', width: 8 },
+            marker: { size: [0, 10], color: '#784c28' },
             text: ['', `  <b>q₂</b> ${fmtVec(q2)}`],
             textposition: 'top right',
-            textfont: { size: 15, color: '#0d47a1', family: 'Inter, sans-serif' },
-            name: 'ОНБ q₂'
+            textfont: { size: 15, color: '#573315', family: 'Inter, sans-serif' },
+            name: 'ОНБ q₂ (мокко)'
         });
     }
     if (q3) {
         traces.push({
             type: 'scatter3d', mode: 'lines+markers+text',
             x: [0, q3[0]], y: [0, q3[1]], z: [0, q3[2]],
-            line: { color: '#7b1fa2', width: 8 },
-            marker: { size: [0, 10], color: '#7b1fa2' },
+            line: { color: '#b57a36', width: 8 },
+            marker: { size: [0, 10], color: '#b57a36' },
             text: ['', `  <b>q₃</b> ${fmtVec(q3)}`],
             textposition: 'top right',
-            textfont: { size: 15, color: '#4a148c', family: 'Inter, sans-serif' },
-            name: 'ОНБ q₃'
+            textfont: { size: 15, color: '#7d501c', family: 'Inter, sans-serif' },
+            name: 'ОНБ q₃ (карамель)'
         });
     }
 
@@ -4030,7 +4030,7 @@ function runCustomGramSchmidt() {
             z: [p1[2], p2[2], p3[2], p4[2]],
             i: [0, 0], j: [1, 2], k: [2, 3],
             opacity: 0.22,
-            color: '#4caf50',
+            color: '#cbba9f',
             name: 'Плоскость Span(q₁, q₂)'
         });
     }
@@ -4925,7 +4925,7 @@ function renderEigenvalues2D(presetKey, testAngleDeg) {
     if (cardEl) {
         const isAligned = deviationDeg < 2.0 || Math.abs(deviationDeg - 180) < 2.0;
         const statusBadge = isAligned
-            ? `<span style="display:inline-block; padding:2px 8px; border-radius:4px; background:var(--success); color:#fff; font-weight:700;">🎯 Вектор x лежит на собственном направлении! (Δθ = ${deviationDeg.toFixed(1)}°)</span>`
+            ? `<span style="display:inline-block; padding:3px 10px; border-radius:6px; background:#f4ece2; border:1px solid #d8c7b8; color:#4a2f1b; font-weight:700;">Вектор x лежит на собственном направлении (Δθ = ${deviationDeg.toFixed(1)}°)</span>`
             : `<span>Угол поворота вектора x: <b>Δθ = ${deviationDeg.toFixed(1)}°</b> (вектор отклоняется от прямой)</span>`;
 
         if (eig.isComplex) {
@@ -4948,7 +4948,7 @@ function renderEigenvalues2D(presetKey, testAngleDeg) {
     }
 }
 
-// --- 2. РЕНДЕР: SVD ДЕКОМПОЗИЦИЯ В 4 ШАГА ---
+// --- 2. РЕНДЕР: SVD ДЕКОМПОЗИЦИЯ В 4 ШАГА (ДЛЯ МАТРИЦЫ ИЗ ЛЕКЦИИ) ---
 let currentSvdStep = 3;
 function renderSVDDecomposition2D(step) {
     currentSvdStep = step;
@@ -4962,83 +4962,133 @@ function renderSVDDecomposition2D(step) {
         }
     }
 
-    const a = 2, b = 1, c = 1, d = 2;
-    const svd = svd2x2(a, b, c, d);
+    // Точные значения для матрицы из лекции A = [[-2, 2], [2, 1]]
+    const a = -2, b = 2, c = 2, d = 1;
+    const s1 = 3, s2 = 2;
+    const invSqrt5 = 1 / Math.sqrt(5); // ≈ 0.4472136
+    // v1 = (-2, 1)/sqrt(5), v2 = (1, 2)/sqrt(5)
+    const v1 = [-2 * invSqrt5, 1 * invSqrt5];
+    const v2 = [1 * invSqrt5, 2 * invSqrt5];
+    // u1 = (2, -1)/sqrt(5), u2 = (1, 2)/sqrt(5)
+    const u1 = [2 * invSqrt5, -1 * invSqrt5];
+    const u2 = [1 * invSqrt5, 2 * invSqrt5];
 
-    const nPoints = 120;
+    const nPoints = 140;
     const xs = [], ys = [];
-    let vec1 = [1, 0], vec2 = [0, 1];
+    const baseXs = [], baseYs = [];
+    let vec1 = [0, 0], vec2 = [0, 0];
+    let label1 = '', label2 = '';
 
     for (let i = 0; i <= nPoints; i++) {
         const phi = (i / nPoints) * 2 * Math.PI;
-        let x = Math.cos(phi);
-        let y = Math.sin(phi);
+        const x0 = Math.cos(phi);
+        const y0 = Math.sin(phi);
+        baseXs.push(x0);
+        baseYs.push(y0);
 
+        let curX = x0, curY = y0;
         if (step === 0) {
-            vec1 = [svd.V[0][0], svd.V[0][1]];
-            vec2 = [svd.V[1][0], svd.V[1][1]];
+            // Исходный единичный круг S¹
+            curX = x0;
+            curY = y0;
+            vec1 = [v1[0], v1[1]];
+            vec2 = [v2[0], v2[1]];
+            label1 = `  <b>v₁</b> (${v1[0].toFixed(2)}, ${v1[1].toFixed(2)})ᵀ`;
+            label2 = `  <b>v₂</b> (${v2[0].toFixed(2)}, ${v2[1].toFixed(2)})ᵀ`;
         } else if (step === 1) {
-            const tx = svd.V[0][0] * x + svd.V[0][1] * y;
-            const ty = svd.V[1][0] * x + svd.V[1][1] * y;
-            x = tx; y = ty;
-            vec1 = [1, 0]; vec2 = [0, 1];
+            // y = Vᵀ x0: ортогональный поворот/отражение
+            curX = v1[0] * x0 + v1[1] * y0;
+            curY = v2[0] * x0 + v2[1] * y0;
+            vec1 = [1, 0];
+            vec2 = [0, 1];
+            label1 = `  <b>Vᵀ v₁ = e₁</b> (1, 0)ᵀ`;
+            label2 = `  <b>Vᵀ v₂ = e₂</b> (0, 1)ᵀ`;
         } else if (step === 2) {
-            const tx = (svd.V[0][0] * x + svd.V[0][1] * y) * svd.s1;
-            const ty = (svd.V[1][0] * x + svd.V[1][1] * y) * svd.s2;
-            x = tx; y = ty;
-            vec1 = [svd.s1, 0]; vec2 = [0, svd.s2];
+            // z = Σ Vᵀ x0: масштабирование вдоль осей e₁, e₂ на σ₁=3, σ₂=2
+            const y1 = v1[0] * x0 + v1[1] * y0;
+            const y2 = v2[0] * x0 + v2[1] * y0;
+            curX = s1 * y1;
+            curY = s2 * y2;
+            vec1 = [s1, 0];
+            vec2 = [0, s2];
+            label1 = `  <b>σ₁ e₁</b> (${s1}, 0)ᵀ [длина 3]`;
+            label2 = `  <b>σ₂ e₂</b> (0, ${s2})ᵀ [длина 2]`;
         } else if (step === 3) {
-            const ax = a * x + b * y;
-            const ay = c * x + d * y;
-            x = ax; y = ay;
-            vec1 = [svd.U[0][0] * svd.s1, svd.U[0][1] * svd.s1];
-            vec2 = [svd.U[1][0] * svd.s2, svd.U[1][1] * svd.s2];
+            // w = U Σ Vᵀ x0 = A x0: итоговый эллипс A(S¹)
+            curX = a * x0 + b * y0;
+            curY = c * x0 + d * y0;
+            vec1 = [u1[0] * s1, u1[1] * s1]; // [6/√5, -3/√5] ≈ [2.68, -1.34]
+            vec2 = [u2[0] * s2, u2[1] * s2]; // [2/√5, 4/√5] ≈ [0.89, 1.79]
+            label1 = `  <b>σ₁ u₁</b> (${vec1[0].toFixed(2)}, ${vec1[1].toFixed(2)})ᵀ [длина 3]`;
+            label2 = `  <b>σ₂ u₂</b> (${vec2[0].toFixed(2)}, ${vec2[1].toFixed(2)})ᵀ [длина 2]`;
         }
 
-        xs.push(x);
-        ys.push(y);
+        xs.push(curX);
+        ys.push(curY);
     }
 
-    const traces = [
-        {
-            x: xs, y: ys,
+    const traces = [];
+
+    // Эталонный единичный круг (пунктир для сравнения на шагах 1, 2, 3)
+    if (step > 0) {
+        traces.push({
+            x: baseXs, y: baseYs,
             mode: 'lines',
-            line: { color: step === 3 ? '#75523c' : (step === 2 ? '#b8863b' : '#5f7a4e'), width: 3 },
-            fill: 'toself',
-            fillcolor: 'rgba(117, 82, 60, 0.08)',
-            name: 'Геометрический образ'
-        },
-        {
-            x: [0, vec1[0]], y: [0, vec1[1]],
-            mode: 'lines+markers',
-            line: { color: '#b34a3b', width: 3.5 },
-            marker: { size: [0, 8] },
-            name: step >= 2 ? `Главная ось (σ₁ = ${svd.s1.toFixed(2)})` : 'Вектор v₁'
-        },
-        {
-            x: [0, vec2[0]], y: [0, vec2[1]],
-            mode: 'lines+markers',
-            line: { color: '#5f7a4e', width: 3.5 },
-            marker: { size: [0, 8] },
-            name: step >= 2 ? `Малая ось (σ₂ = ${svd.s2.toFixed(2)})` : 'Вектор v₂'
-        }
-    ];
+            line: { color: '#d0c5b8', width: 1.5, dash: 'dot' },
+            name: 'Исходный круг S¹ (эталон)',
+            hoverinfo: 'skip'
+        });
+    }
+
+    // Главная деформированная кривая
+    traces.push({
+        x: xs, y: ys,
+        mode: 'lines',
+        line: { color: step === 3 ? '#5c3d28' : (step === 2 ? '#784c28' : '#8c6751'), width: 3.5 },
+        fill: 'toself',
+        fillcolor: 'rgba(123, 85, 64, 0.08)',
+        name: step === 3 ? 'Итоговый эллипс A(S¹)' : (step === 2 ? 'Канонический эллипс Σ(S¹)' : 'Единичный круг S¹')
+    });
+
+    // Вектор 1 (первое сингулярное направление, терракотово-кофейный)
+    traces.push({
+        x: [0, vec1[0]], y: [0, vec1[1]],
+        mode: 'lines+markers+text',
+        line: { color: '#8c4328', width: 4 },
+        marker: { size: [0, 9], color: '#8c4328' },
+        text: ['', label1],
+        textposition: vec1[1] < 0 ? 'bottom right' : 'top right',
+        textfont: { size: 13, color: '#6e2d17', family: 'Inter, sans-serif' },
+        name: step >= 2 ? `Главная полуось (σ₁ = 3)` : 'Вектор v₁'
+    });
+
+    // Вектор 2 (второе сингулярное направление, карамельно-кофейный)
+    traces.push({
+        x: [0, vec2[0]], y: [0, vec2[1]],
+        mode: 'lines+markers+text',
+        line: { color: '#b07d39', width: 4 },
+        marker: { size: [0, 9], color: '#b07d39' },
+        text: ['', label2],
+        textposition: 'top right',
+        textfont: { size: 13, color: '#7c511a', family: 'Inter, sans-serif' },
+        name: step >= 2 ? `Малая полуось (σ₂ = 2)` : 'Вектор v₂'
+    });
 
     const stepTitles = [
-        'Шаг 0: Единичный круг S¹ и правые сингулярные векторы v₁, v₂',
-        'Шаг 1: Применение ортогональной матрицы Vᵀ (поворот, совмещающий v с осями координат)',
-        'Шаг 2: Применение диагональной матрицы Σ (масштабирование вдоль осей на σ₁=3.0, σ₂=1.0)',
-        'Шаг 3: Применение ортогональной матрицы U (финальный поворот эллипса: A = U Σ Vᵀ)'
+        'Шаг 0: Единичный круг S¹ и ортогональные правые сингулярные векторы v₁, v₂',
+        'Шаг 1: Применение ортогональной матрицы Vᵀ (совмещение v₁, v₂ со стандартными осями e₁, e₂)',
+        'Шаг 2: Применение диагональной матрицы Σ (растяжение вдоль осей на σ₁ = 3 и σ₂ = 2)',
+        'Шаг 3: Финальный поворот матрицы U (итоговый эллипс: A = U Σ Vᵀ, полуоси длины 3 и 2)'
     ];
 
     const layout = {
         title: { text: stepTitles[step], font: { size: 13.5, color: '#2a1d17' } },
-        height: 478,
+        height: 480,
         autosize: true,
         paper_bgcolor: 'rgba(0,0,0,0)',
         plot_bgcolor: 'rgba(0,0,0,0)',
-        xaxis: { title: 'z₁', range: [-3.8, 3.8], zeroline: true, zerolinecolor: '#e8e1d7', gridcolor: '#f0ece6' },
-        yaxis: { title: 'z₂', range: [-3.8, 3.8], zeroline: true, zerolinecolor: '#e8e1d7', gridcolor: '#f0ece6', scaleanchor: 'x' },
+        xaxis: { title: 'Координата 1', range: [-3.8, 3.8], zeroline: true, zerolinecolor: '#e8e1d7', gridcolor: '#f0ece6' },
+        yaxis: { title: 'Координата 2', range: [-3.8, 3.8], zeroline: true, zerolinecolor: '#e8e1d7', gridcolor: '#f0ece6', scaleanchor: 'x' },
         margin: { l: 45, r: 25, t: 40, b: 60 },
         legend: { orientation: 'h', y: -0.18, font: { size: 10 } },
         showlegend: true
@@ -5046,13 +5096,14 @@ function renderSVDDecomposition2D(step) {
 
     Plotly.react(plotEl, traces, layout, { responsive: true, displayModeBar: false });
 
+    // Информационный блок с объяснением формул шага
     const expEl = document.getElementById('svd-step-explanation');
     if (expEl) {
         const explanations = [
-            `<b>Шаг 0 (Исходное пространство):</b> Единичный круг $S^1$. Правые сингулярные векторы $v_1, v_2$ — это ортогональный базис направлений, которые при будущем действии оператора перейдут в главные оси итогового эллипса.`,
-            `<b>Шаг 1 (Ортогональный поворот $V^T$):</b> Поворачивает пространство так, чтобы векторы $v_1, v_2$ совпали со стандартными осями $e_1, e_2$. Форма круга не меняется (изометрия, сохраняющая длины и углы).`,
-            `<b>Шаг 2 (Масштабирование $\\Sigma$):</b> Растягивает фигуру вдоль горизонтальной оси в $\\sigma_1 = ${svd.s1.toFixed(2)}$ раз, а вдоль вертикальной — в $\\sigma_2 = ${svd.s2.toFixed(2)}$ раз. Круг превращается в канонический эллипс.`,
-            `<b>Шаг 3 (Финальный поворот $U$):</b> Ортогональная матрица $U$ поворачивает эллипс в целевом пространстве $\\mathbb{R}^m$. Столбцы $u_1, u_2$ становятся направлениями главных полуосей итогового эллипса $A(S^1)$. Каждая матрица — это композиция <i>«поворот $\\to$ масштаб $\\to$ поворот»</i>!`
+            `<b>Шаг 0 (Исходное пространство):</b> Единичный круг $S^1: x_1^2 + x_2^2 \\le 1$. На нём отмечены взаимно ортогональные правые сингулярные векторы $v_1 = \\frac{1}{\\sqrt{5}}\\begin{pmatrix}-2\\\\1\\end{pmatrix} \\approx \\begin{pmatrix}-0.89\\\\0.45\\end{pmatrix}$ и $v_2 = \\frac{1}{\\sqrt{5}}\\begin{pmatrix}1\\\\2\\end{pmatrix} \\approx \\begin{pmatrix}0.45\\\\0.89\\end{pmatrix}$. Это собственные векторы матрицы $A^T A = \\begin{pmatrix}8 & -2\\\\-2 & 5\\end{pmatrix}$. Скалярное произведение $\\langle v_1, v_2 \\rangle = 0$.`,
+            `<b>Шаг 1 (Ортогональный поворот $V^T$):</b> Преобразование $y = V^T x$ матрицей $V^T = \\frac{1}{\\sqrt{5}}\\begin{pmatrix}-2 & 1\\\\1 & 2\\end{pmatrix}$. Поскольку $V^T$ ортогональна ($V^T V = I$), отображение является изометрией: единичный круг сохраняет свою форму ($y_1^2 + y_2^2 \\le 1$). При этом векторы поворачиваются и ложатся точно на координатные оси: $V^T v_1 = e_1 = \\begin{pmatrix}1\\\\0\\end{pmatrix}$ и $V^T v_2 = e_2 = \\begin{pmatrix}0\\\\1\\end{pmatrix}$.`,
+            `<b>Шаг 2 (Диагональное масштабирование $\\Sigma$):</b> Матрица $\\Sigma = \\begin{pmatrix}3 & 0\\\\0 & 2\\end{pmatrix}$ растягивает фигуру вдоль горизонтальной оси в $\\sigma_1 = 3$ раза, а вдоль вертикальной — в $\\sigma_2 = 2$ раза. Окружность переходит в канонический эллипс $\\frac{z_1^2}{3^2} + \\frac{z_2^2}{2^2} \\le 1$. Векторы удлиняются до полуосей: $\\sigma_1 e_1 = \\begin{pmatrix}3\\\\0\\end{pmatrix}$ и $\\sigma_2 e_2 = \\begin{pmatrix}0\\\\2\\end{pmatrix}$.`,
+            `<b>Шаг 3 (Финальный поворот $U$):</b> Ортогональная матрица $U = \\frac{1}{\\sqrt{5}}\\begin{pmatrix}2 & 1\\\\-1 & 2\\end{pmatrix}$ осуществляет финальный поворот эллипса в целевом пространстве $\\mathbb{R}^2$ на угол $\\theta \\approx -26.6^\\circ$. Главные полуоси равны сингулярным числам $\\sigma_1 = 3$ и $\\sigma_2 = 2$, а направлены вдоль левых сингулярных векторов $\\sigma_1 u_1 = \\begin{pmatrix}2.68\\\\-1.34\\end{pmatrix}$ и $\\sigma_2 u_2 = \\begin{pmatrix}0.89\\\\1.79\\end{pmatrix}$. Итоговый эллипс абсолютно точно совпадает с прямым действием матрицы $A = \\begin{pmatrix}-2 & 2\\\\2 & 1\\end{pmatrix}$ на единичный круг: $A(S^1)$!`
         ];
         expEl.innerHTML = explanations[step];
         if (window.renderMathInElement) {
