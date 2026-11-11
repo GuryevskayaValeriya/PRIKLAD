@@ -38,6 +38,7 @@
 
     <link rel="stylesheet" href="css/style.css?v=2.4">
     <link rel="stylesheet" href="css/quiz.css?v=2.4">
+<link rel="stylesheet" href="css/security.css?v=1.0">
 
 </head>
 
@@ -3777,6 +3778,32 @@
                     <b>Геометрический вывод:</b> Оператор $A$ растягивает плоскость вдоль направления $q_1 = (1/\sqrt{2}, 1/\sqrt{2})^T$ в 4 раза, а вдоль перпендикулярного направления $q_2 = (-1/\sqrt{2}, 1/\sqrt{2})^T$ — в 2 раза. Образом единичного круга является эллипс с главными полуосями $a = 4$ и $b = 2$, повёрнутый на угол $45^\circ$.
                 </div>
             </div>
+
+            <!-- Интерактивный стенд: Спектральная декомпозиция симметричной матрицы A = Q Λ Qᵀ -->
+            <div class="interactive-card" style="margin-top:1.5rem;">
+                <div class="card-title-row">
+                    <h3>Интерактивная визуализация примера: Спектральная декомпозиция в 4 шага</h3>
+                    <span class="badge">A = Q Λ Qᵀ</span>
+                </div>
+                <p style="font-size:0.92rem; color:var(--text-muted); margin-bottom:0.8rem;">
+                    Пошаговая геометрическая декомпозиция симметричной матрицы из примера выше $A = \begin{pmatrix} 3 & 1 \\ 1 & 3 \end{pmatrix}$. Переключайте шаги кнопками и наблюдайте, как ортогональный поворот $Q^T$, диагональное масштабирование $\Lambda$ на $\lambda_1 = 4, \; \lambda_2 = 2$ и обратный поворот $Q$ трансформируют единичный круг в итоговый эллипс $A(S^1)$:
+                </p>
+                <div style="margin: 0.6rem 0 1rem 0; padding: 0.65rem 0.95rem; background: var(--bg-main, #faf8f5); border: 1px solid var(--border-color, #e6ded7); border-radius: 8px; font-size: 0.9rem; line-height: 1.6;">
+                    <b>Матрицы факторизации $A = Q \Lambda Q^T$:</b> $\quad A = \begin{pmatrix} 3 & 1 \\ 1 & 3 \end{pmatrix}$, $\quad \Lambda = \begin{pmatrix} 4 & 0 \\ 0 & 2 \end{pmatrix}$, $\quad Q = \frac{1}{\sqrt{2}}\begin{pmatrix} 1 & -1 \\ 1 & 1 \end{pmatrix}, \quad Q^T = \frac{1}{\sqrt{2}}\begin{pmatrix} 1 & 1 \\ -1 & 1 \end{pmatrix}$.
+                </div>
+                <div class="controls-grid" style="align-items:center;">
+                    <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                        <button class="btn btn-secondary" id="btn-spectral-step0">Шаг 0: Круг $S^1$ и векторы $q_1, q_2$</button>
+                        <button class="btn btn-secondary" id="btn-spectral-step1">Шаг 1: Поворот $Q^T$</button>
+                        <button class="btn btn-secondary" id="btn-spectral-step2">Шаг 2: Растяжение $\Lambda$ ($\lambda_1=4, \lambda_2=2$)</button>
+                        <button class="btn btn-primary" id="btn-spectral-step3">Шаг 3: Поворот $Q$ ($A = Q\Lambda Q^T$)</button>
+                    </div>
+                </div>
+                <div style="margin-top:1.2rem;">
+                    <div id="plot-spectral-geometry" class="plot-container" style="background:#ffffff; width:100%; min-height:480px; border:1px solid var(--border-color, #e6ded7); border-radius:10px; padding:0.5rem; box-sizing:border-box;"></div>
+                </div>
+                <div id="spectral-step-explanation" class="callout callout-theory" style="margin-top:1rem;"></div>
+            </div>
 </section>
 
         <!-- 3.5: Квадратичные формы и положительная определённость -->
@@ -3982,6 +4009,77 @@
                 $$\kappa(X^T X) = \frac{\sigma_{\max}(X^T X)}{\sigma_{\min}(X^T X)} = \frac{\sigma_{\max}(X)^2}{\sigma_{\min}(X^2)} = \kappa(X)^2$$
                 Это строгая математическая формализация того, почему явное формирование нормального уравнения удваивает в логарифмической шкале потерю верных разрядов: потеря точности составляет $\log_{10} \kappa(X^T X) = 2 \log_{10} \kappa(X)$ десятичных цифр. Решение через SVD ($X^+ y$) сохраняет число обусловленности $\kappa(X)$ и гарантирует наивысшую вычислительную точность.
             </div>
+
+            <div class="callout callout-proof" style="margin-top:1.2rem;">
+                <div class="callout-title">Пример вычислений: Построение псевдообратной матрицы $A^+$ и анализ устойчивости СЛАУ</div>
+                Рассмотрим два ключевых аспекта: нахождение псевдообратной матрицы $A^+$ для переопределённой системы и влияние числа обусловленности $\kappa(A)$ на устойчивость решений.
+                <br><br>
+                <b>Часть 1. Аналитическое вычисление $A^+$ для прямоугольной матрицы $3 \times 2$:</b>
+                Пусть задана переопределённая система $A x \approx b$ с матрицей:
+                $$A = \begin{pmatrix} 1 & 0 \\ 0 & 1 \\ 1 & 1 \end{pmatrix} \in \mathbb{R}^{3 \times 2}$$
+                Столбцы матрицы линейно независимы ($\operatorname{rank}(A) = 2 = n$). Найдём матрицу Грама:
+                $$A^T A = \begin{pmatrix} 1 & 0 & 1 \\ 0 & 1 & 1 \end{pmatrix} \begin{pmatrix} 1 & 0 \\ 0 & 1 \\ 1 & 1 \end{pmatrix} = \begin{pmatrix} 2 & 1 \\ 1 & 2 \end{pmatrix}$$
+                <ul style="margin-left:1.4rem; margin-top:0.3rem;">
+                    <li>Собственные значения: $\det(A^T A - \lambda I) = (2 - \lambda)^2 - 1 = \lambda^2 - 4\lambda + 3 = 0 \implies \lambda_1 = 3, \; \lambda_2 = 1$.</li>
+                    <li>Сингулярные числа: $\sigma_1 = \sqrt{3} \approx 1.732$, $\sigma_2 = \sqrt{1} = 1$.</li>
+                    <li>Спектральная норма матрицы: $\|A\|_2 = \sigma_{\max} = \sqrt{3} \approx 1.732$.</li>
+                    <li>Спектральная норма псевдообратной матрицы: $\|A^+\|_2 = \frac{1}{\sigma_{\min}} = 1$.</li>
+                    <li>Спектральное число обусловленности: $\kappa(A) = \frac{\sigma_1}{\sigma_2} = \sqrt{3} \approx 1.732$.</li>
+                </ul>
+                Так как ранг полный по столбцам, псевдообратная матрица Мура-Пенроуза вычисляется по формуле:
+                $$A^+ = (A^T A)^{-1} A^T = \frac{1}{3} \begin{pmatrix} 2 & -1 \\ -1 & 2 \end{pmatrix} \begin{pmatrix} 1 & 0 & 1 \\ 0 & 1 & 1 \end{pmatrix} = \frac{1}{3} \begin{pmatrix} 2 & -1 & 1 \\ -1 & 2 & 1 \end{pmatrix} \in \mathbb{R}^{2 \times 3}$$
+                Для любого вектора наблюдений $b = (b_1, b_2, b_3)^T$ нормальное решение МНК $\hat{x} = A^+ b$ минимизирует евклидову норму невязки $\|A x - b\|_2$.
+                <br><br>
+                <b>Часть 2. Число обусловленности и взрыв погрешности:</b>
+                Рассмотрим систему $A_\theta x = b$, столбцы которой образуют малый угол $\theta$:
+                $$A_\theta = \begin{pmatrix} 1 & \cos\theta \\ 0 & \sin\theta \end{pmatrix}$$
+                Сингулярные числа выражаются аналитически: $\sigma_1 = \sqrt{2}\cos(\theta/2)$, $\sigma_2 = \sqrt{2}\sin(\theta/2)$, откуда:
+                $$\kappa(A_\theta) = \frac{\sigma_1}{\sigma_2} = \operatorname{ctg}\left(\frac{\theta}{2}\right)$$
+                <ul style="margin-left:1.4rem; margin-top:0.3rem;">
+                    <li><b>Ортогональный базис ($\theta = 90^\circ$):</b> $\kappa(A) = \operatorname{ctg}(45^\circ) = 1.0$. Относительное возмущение в правой части $\|\Delta b\|_2 / \|b\|_2 = 1\%$ даёт ровно такую же погрешность в решении $\|\Delta x\|_2 / \|x\|_2 = 1\%$. Решение максимально устойчиво.</li>
+                    <li><b>Почти зависимые столбцы ($\theta = 2^\circ$):</b> $\kappa(A) = \operatorname{ctg}(1^\circ) \approx 57.3$. Если шум измерения составляет всего $0.5\%$, то ошибка решения возрастает до $57.3 \times 0.5\% \approx 28.6\%$ — погрешность усилилась почти в $60$ раз!</li>
+                </ul>
+                <div style="font-size:0.9rem; color:var(--text-secondary); margin-top:0.6rem; padding:0.6rem 0.8rem; background:rgba(0,0,0,0.02); border-left:3px solid var(--accent-primary); border-radius:4px;">
+                    <b>Вывод для вычислений:</b> Число обусловленности $\kappa(A)$ — это предельный коэффициент усиления относительной погрешности при решении СЛАУ и обращении матриц. При $\kappa(A) \approx 10^k$ вычисления теряют до $k$ значащих десятичных цифр.
+                </div>
+            </div>
+
+            <!-- Интерактивный симулятор: Геометрия обусловленности и устойчивость решений -->
+            <div class="interactive-card" style="margin-top:1.5rem;">
+                <div class="card-title-row">
+                    <h3>Интерактивный симулятор: Геометрия обусловленности и псевдообращения $A^+$</h3>
+                    <span class="badge">Condition Number & Sensitivity</span>
+                </div>
+                <p style="font-size:0.92rem; color:var(--text-muted); margin-bottom:1rem;">
+                    Исследуйте, как взаимное расположение столбцов матрицы $A = [a_1, a_2]$ влияет на спектральное число обусловленности $\kappa(A) = \operatorname{ctg}(\theta/2)$ и устойчивость СЛАУ. Наблюдайте, как малый круговой шум правой части $\|\Delta b\|$ преобразуется через $A^+$ в вытянутый эллипс погрешности решений:
+                </p>
+                
+                <div class="controls-grid">
+                    <div class="control-group">
+                        <label>Пресеты обусловленности:</label>
+                        <div style="display:flex; gap:0.4rem; flex-wrap:wrap; margin-top:0.25rem;">
+                            <button class="btn btn-secondary" id="btn-cond-preset-ideal">Идеальная ($\theta = 90^\circ$, $\kappa = 1$)</button>
+                            <button class="btn btn-primary" id="btn-cond-preset-medium">Умеренная ($\theta = 45^\circ$, $\kappa \approx 2.4$)</button>
+                            <button class="btn btn-secondary" id="btn-cond-preset-bad">Критическая ($\theta = 5^\circ$, $\kappa \approx 23$)</button>
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <label>Угол между столбцами $\theta$: <span id="val-cond-angle">45</span>°</label>
+                        <input type="range" id="slider-cond-angle" min="2" max="90" value="45" step="1">
+                    </div>
+                    <div class="control-group">
+                        <label>Относительный шум правой части $\|\Delta b\| / \|b\|$: <span id="val-cond-noise">3</span>%</label>
+                        <input type="range" id="slider-cond-noise" min="0" max="10" value="3" step="0.5">
+                    </div>
+                </div>
+
+                <div style="display:flex; flex-direction:column; gap:1.5rem; margin-top:1.2rem;">
+                    <div id="plot-cond-space-b" class="plot-container" style="background:#ffffff; width:100%; min-height:420px; border:1px solid var(--border-color, #e6ded7); border-radius:10px; padding:0.5rem; box-sizing:border-box;"></div>
+                    <div id="plot-cond-space-x" class="plot-container" style="background:#ffffff; width:100%; min-height:420px; border:1px solid var(--border-color, #e6ded7); border-radius:10px; padding:0.5rem; box-sizing:border-box;"></div>
+                </div>
+
+                <div id="cond-sim-metrics" class="callout callout-theory" style="margin-top:1rem;"></div>
+            </div>
         </section>
 
         <!-- 3.8: Теорема Эккарта-Юнга и усечённое SVD -->
@@ -4002,6 +4100,53 @@
                 $$\min_{\operatorname{rank}(B) \le k} \|A - B\|_F = \|A - A_k\|_F = \sqrt{\sum_{i=k+1}^r \sigma_i^2}$$
                 $$\min_{\operatorname{rank}(B) \le k} \|A - B\|_2 = \|A - A_k\|_2 = \sigma_{k+1}$$
                 <b>Смысл теоремы:</b> сингулярные числа упорядочены по убыванию не просто для удобства, а потому что они ранжируют направления по их истинному вкладу в матрицу. Отбрасывание младших сингулярных троек — <b>оптимальное сжатие матрицы</b> до ранга $k$, и никакой другой выбор матрицы ранга $k$ не даст меньшей ошибки приближения.
+            </div>
+
+            <div class="callout callout-proof" style="margin-top:1.2rem;">
+                <div class="callout-title">Пример вычислений: Оптимальная низкоранговая аппроксимация по теореме Эккарта-Юнга</div>
+                Рассмотрим прямоугольную матрицу наблюдений ранга 2:
+                $$A = \begin{pmatrix} 1 & 1 \\ 0 & 1 \\ -1 & 1 \end{pmatrix} \in \mathbb{R}^{3 \times 2}, \qquad \operatorname{rank}(A) = 2$$
+                Построим её наилучшее приближение матрицей ранга $k = 1$ ($A_1$), проверим теоретические границы погрешности и подсчитаем сохранённую спектральную энергию.
+                <br><br>
+                <b>Шаг 1. Полное сингулярное разложение матрицы $A$:</b>
+                Найдём матрицу Грама $A^T A$:
+                $$A^T A = \begin{pmatrix} 1 & 0 & -1 \\ 1 & 1 & 1 \end{pmatrix} \begin{pmatrix} 1 & 1 \\ 0 & 1 \\ -1 & 1 \end{pmatrix} = \begin{pmatrix} 2 & 0 \\ 0 & 3 \end{pmatrix}$$
+                Матрица Грама диагональна. Её собственные значения упорядочиваем по убыванию:
+                $$\lambda_1 = 3 \implies \sigma_1 = \sqrt{3} \approx 1.732, \qquad \lambda_2 = 2 \implies \sigma_2 = \sqrt{2} \approx 1.414$$
+                Правые и левые сингулярные векторы:
+                $$v_1 = \begin{pmatrix} 0 \\ 1 \end{pmatrix}, \quad v_2 = \begin{pmatrix} 1 \\ 0 \end{pmatrix}, \qquad u_1 = \frac{1}{\sqrt{3}} A v_1 = \frac{1}{\sqrt{3}} \begin{pmatrix} 1 \\ 1 \\ 1 \end{pmatrix}, \quad u_2 = \frac{1}{\sqrt{2}} A v_2 = \frac{1}{\sqrt{2}} \begin{pmatrix} 1 \\ 0 \\ -1 \end{pmatrix}$$
+                Векторы $u_1, u_2$ взаимно ортонормированы: $\langle u_1, u_2 \rangle = \frac{1}{\sqrt{6}}(1 \cdot 1 + 1 \cdot 0 + 1 \cdot (-1)) = 0$.
+                Точное SVD-разложение ранга 2:
+                $$A = \sigma_1 u_1 v_1^T + \sigma_2 u_2 v_2^T = \begin{pmatrix} 0 & 1 \\ 0 & 1 \\ 0 & 1 \end{pmatrix} + \begin{pmatrix} 1 & 0 \\ 0 & 0 \\ -1 & 0 \end{pmatrix} = \begin{pmatrix} 1 & 1 \\ 0 & 1 \\ -1 & 1 \end{pmatrix}$$
+                <br>
+                <b>Шаг 2. Построение наилучшей матрицы ранга $k = 1$ ($A_1$):</b>
+                По теореме Эккарта-Юнга оптимальное приближение получается усечением — сохранением только первой сингулярной тройки $(\sigma_1, u_1, v_1)$:
+                $$A_1 = \sigma_1 u_1 v_1^T = \sqrt{3} \left(\frac{1}{\sqrt{3}} \begin{pmatrix} 1 \\ 1 \\ 1 \end{pmatrix}\right) \begin{pmatrix} 0 & 1 \end{pmatrix} = \begin{pmatrix} 0 & 1 \\ 0 & 1 \\ 0 & 1 \end{pmatrix}$$
+                Ранг матрицы $A_1$ равен 1: все её столбцы коллинеарны вектору $(1, 1, 1)^T$.
+                <br><br>
+                <b>Шаг 3. Матрица остатка и проверка точности теоремы Эккарта-Юнга:</b>
+                Матрица ошибки приближения:
+                $$E_1 = A - A_1 = \begin{pmatrix} 1 & 0 \\ 0 & 0 \\ -1 & 0 \end{pmatrix} = \sigma_2 u_2 v_2^T$$
+                Проверим совпадение обеих теоретических норм:
+                <ul style="margin-left:1.4rem; margin-top:0.3rem;">
+                    <li><b>Спектральная норма ошибки:</b>
+                        $$\|A - A_1\|_2 = \|E_1\|_2 = \sigma_2 = \sqrt{2} \approx 1.414$$
+                        Норма ошибки в точности равна первому отброшенному сингулярному числу $\sigma_{k+1} = \sigma_2 = \sqrt{2}$.
+                    </li>
+                    <li style="margin-top:0.3rem;"><b>Норма Фробениуса ошибки:</b>
+                        $$\|A - A_1\|_F = \sqrt{1^2 + 0^2 + 0^2 + 0^2 + (-1)^2 + 0^2} = \sqrt{1 + 1} = \sqrt{2}$$
+                        По теореме Эккарта-Юнга: $\|A - A_1\|_F = \sqrt{\sum_{i=2}^2 \sigma_i^2} = \sqrt{\sigma_2^2} = \sqrt{2}$. Полное тождественное совпадение!
+                    </li>
+                </ul>
+                <br>
+                <b>Шаг 4. Доля сохранённой энергии и выигрыш от сжатия:</b>
+                Полная энергия исходной матрицы (квадрат нормы Фробениуса):
+                $$\|A\|_F^2 = \sigma_1^2 + \sigma_2^2 = (\sqrt{3})^2 + (\sqrt{2})^2 = 3 + 2 = 5$$
+                Доля сохранённой энергии при сжатии до ранга $1$:
+                $$\operatorname{Energy}(A_1) = \frac{\sigma_1^2}{\sigma_1^2 + \sigma_2^2} = \frac{3}{3 + 2} = \frac{3}{5} = 60\%$$
+                <div style="font-size:0.9rem; color:var(--text-secondary); margin-top:0.6rem; padding:0.6rem 0.8rem; background:rgba(0,0,0,0.02); border-left:3px solid var(--accent-primary); border-radius:4px;">
+                    <b>Практический вывод (Принцип сжатия данных и LoRA в нейросетях):</b> Никакая другая матрица ранга 1 (включая любые эвристики или округления) не может приблизить матрицу $A$ лучше, чем $A_1$. В больших нейросетях замена матрицы весов $W \in \mathbb{R}^{d \times d}$ на факторизованное низкоранговое произведение $W \approx B \cdot A$ ($B \in \mathbb{R}^{d \times k}, A \in \mathbb{R}^{k \times d}$ при $k \ll d$) лежит в основе адаптации моделей LoRA (Low-Rank Adaptation), сокращая число обучаемых параметров в сотни раз при сохранении подавляющей части энергии весов.
+                </div>
             </div>
 
             <!-- Интерактивный стенд: Сжатие матрицы по Эккарту-Юнгу -->
@@ -4068,6 +4213,77 @@
                 Это стандартный практический критерий выбора числа компонент $k$ (например, сохранение 95% или 99% дисперсии), эквивалентный по теореме Эккарта-Юнга минимизации нормы ошибки приближения данных матрицей ранга $k$.
             </div>
 
+            <div class="callout callout-theory" style="margin-top: 1.2rem;">
+                <div class="callout-title">Подробный практический пример: пошаговый расчет PCA вручную</div>
+                Рассмотрим классическую задачу снижения размерности с $d = 2$ до $k = 1$ для выборки из $N = 4$ двумерных наблюдений:
+                $$X = \begin{pmatrix} 1 & 1 \\ 2 & 3 \\ 3 & 2 \\ 6 & 6 \end{pmatrix} \in \mathbb{R}^{4 \times 2}, \quad x_1 = \begin{pmatrix} 1 \\ 1 \end{pmatrix}, \; x_2 = \begin{pmatrix} 2 \\ 3 \end{pmatrix}, \; x_3 = \begin{pmatrix} 3 \\ 2 \end{pmatrix}, \; x_4 = \begin{pmatrix} 6 \\ 6 \end{pmatrix}$$
+                <br>
+                <b>Шаг 1. Вычисление выборочного среднего и центрирование данных:</b>
+                Вектор математического ожидания (центр масс выборки):
+                $$\mu = \frac{1}{N} \sum_{i=1}^N x_i = \frac{1}{4} \begin{pmatrix} 1 + 2 + 3 + 6 \\ 1 + 3 + 2 + 6 \end{pmatrix} = \begin{pmatrix} 3 \\ 3 \end{pmatrix}$$
+                Центрированная матрица данных $X_c = X - \mathbf{1}\mu^T$:
+                $$X_c = \begin{pmatrix} 1 - 3 & 1 - 3 \\ 2 - 3 & 3 - 3 \\ 3 - 3 & 2 - 3 \\ 6 - 3 & 6 - 3 \end{pmatrix} = \begin{pmatrix} -2 & -2 \\ -1 & 0 \\ 0 & -1 \\ 3 & 3 \end{pmatrix}$$
+                Центр выборки перенесён строго в начало координат: $\frac{1}{4}\sum_{i=1}^4 x_{c,i} = \begin{pmatrix} 0 \\ 0 \end{pmatrix}$.
+                <br><br>
+                <b>Шаг 2. Выборочная ковариационная матрица $\Sigma$:</b>
+                Используем стандартную несмещённую оценку ковариации выборки с делителем $N - 1 = 3$:
+                $$\Sigma = \frac{1}{N - 1} X_c^T X_c = \frac{1}{3} \begin{pmatrix} -2 & -1 & 0 & 3 \\ -2 & 0 & -1 & 3 \end{pmatrix} \begin{pmatrix} -2 & -2 \\ -1 & 0 \\ 0 & -1 \\ 3 & 3 \end{pmatrix}$$
+                Вычисляем элементы симметричной матрицы $\Sigma$:
+                $$\Sigma_{11} = \frac{(-2)^2 + (-1)^2 + 0^2 + 3^2}{3} = \frac{4 + 1 + 0 + 9}{3} = \frac{14}{3} \approx 4.67$$
+                $$\Sigma_{12} = \Sigma_{21} = \frac{(-2)(-2) + (-1)(0) + (0)(-1) + (3)(3)}{3} = \frac{4 + 0 + 0 + 9}{3} = \frac{13}{3} \approx 4.33$$
+                $$\Sigma_{22} = \frac{(-2)^2 + 0^2 + (-1)^2 + 3^2}{3} = \frac{4 + 0 + 1 + 9}{3} = \frac{14}{3} \approx 4.67$$
+                $$\Sigma = \frac{1}{3} \begin{pmatrix} 14 & 13 \\ 13 & 14 \end{pmatrix} = \begin{pmatrix} 14/3 & 13/3 \\ 13/3 & 14/3 \end{pmatrix}$$
+                <br>
+                <b>Шаг 3. Спектральное разложение ковариационной матрицы $\Sigma = V \Lambda V^T$:</b>
+                Характеристическое уравнение $\det(\Sigma - \lambda I) = 0$:
+                $$\det \begin{pmatrix} 14/3 - \lambda & 13/3 \\ 13/3 & 14/3 - \lambda \end{pmatrix} = \left(\frac{14}{3} - \lambda\right)^2 - \left(\frac{13}{3}\right)^2 = \left(\frac{14}{3} - \lambda - \frac{13}{3}\right)\left(\frac{14}{3} - \lambda + \frac{13}{3}\right) = \left(\frac{1}{3} - \lambda\right)(9 - \lambda) = 0$$
+                Собственные значения (дисперсии вдоль главных направлений):
+                $$\lambda_1 = 9, \quad \lambda_2 = \frac{1}{3} \approx 0.333$$
+                Полная дисперсия выборки: $\operatorname{tr}(\Sigma) = \frac{14}{3} + \frac{14}{3} = \frac{28}{3} = \lambda_1 + \lambda_2 = 9 + \frac{1}{3} = \frac{28}{3}$.
+                <br><br>
+                Доля объяснённой дисперсии (Explained Variance Ratio):
+                $$\operatorname{EVR}_1 = \frac{\lambda_1}{\lambda_1 + \lambda_2} = \frac{9}{28/3} = \frac{27}{28} \approx 96.43\%$$
+                $$\operatorname{EVR}_2 = \frac{\lambda_2}{\lambda_1 + \lambda_2} = \frac{1/3}{28/3} = \frac{1}{28} \approx 3.57\%$$
+                Первая главная компонента концентрирует в себе <b>96.43%</b> всей вариации данных!
+                <br><br>
+                Нормированные собственные векторы (направления главных осей):
+                <ul style="margin-left:1.4rem; margin-top:0.3rem;">
+                    <li>Для $\lambda_1 = 9$:
+                        $$(\Sigma - 9 I) v_1 = \begin{pmatrix} -13/3 & 13/3 \\ 13/3 & -13/3 \end{pmatrix} \begin{pmatrix} v_{11} \\ v_{12} \end{pmatrix} = 0 \implies v_{11} = v_{12} \implies v_1 = \frac{1}{\sqrt{2}} \begin{pmatrix} 1 \\ 1 \end{pmatrix} \approx \begin{pmatrix} 0.7071 \\ 0.7071 \end{pmatrix} \quad (\theta = 45^\circ)$$
+                    </li>
+                    <li style="margin-top:0.3rem;">Для $\lambda_2 = 1/3$:
+                        $$\left(\Sigma - \frac{1}{3} I\right) v_2 = \begin{pmatrix} 13/3 & 13/3 \\ 13/3 & 13/3 \end{pmatrix} \begin{pmatrix} v_{21} \\ v_{22} \end{pmatrix} = 0 \implies v_{21} = -v_{22} \implies v_2 = \frac{1}{\sqrt{2}} \begin{pmatrix} -1 \\ 1 \end{pmatrix} \approx \begin{pmatrix} -0.7071 \\ 0.7071 \end{pmatrix} \quad (\theta = 135^\circ)$$
+                    </li>
+                </ul>
+                <br>
+                <b>Шаг 4. Снижение размерности — ортогональная проекция на $PC_1$:</b>
+                Проецируем центрированные точки $x_{c,i}$ на ось $v_1$ ($z_i = x_{c,i}^T v_1$):
+                $$z_1 = \begin{pmatrix} -2 & -2 \end{pmatrix} \frac{1}{\sqrt{2}}\begin{pmatrix} 1 \\ 1 \end{pmatrix} = -\frac{4}{\sqrt{2}} = -2\sqrt{2} \approx -2.828$$
+                $$z_2 = \begin{pmatrix} -1 & 0 \end{pmatrix} \frac{1}{\sqrt{2}}\begin{pmatrix} 1 \\ 1 \end{pmatrix} = -\frac{1}{\sqrt{2}} \approx -0.707$$
+                $$z_3 = \begin{pmatrix} 0 & -1 \end{pmatrix} \frac{1}{\sqrt{2}}\begin{pmatrix} 1 \\ 1 \end{pmatrix} = -\frac{1}{\sqrt{2}} \approx -0.707$$
+                $$z_4 = \begin{pmatrix} 3 & 3 \end{pmatrix} \frac{1}{\sqrt{2}}\begin{pmatrix} 1 \\ 1 \end{pmatrix} = \frac{6}{\sqrt{2}} = 3\sqrt{2} \approx 4.243$$
+                Проверка выборочной дисперсии одномерных проекций:
+                $$S_z^2 = \frac{1}{3}\sum_{i=1}^4 z_i^2 = \frac{1}{3}\left(8 + \frac{1}{2} + \frac{1}{2} + 18\right) = \frac{27}{3} = 9 = \lambda_1 \quad \text{(строго тождественно } \lambda_1\text{)}$$
+                <br>
+                <b>Шаг 5. Восстановление данных $\hat{X}$ и проверка ошибки реконструкции:</b>
+                Восстанавливаем каждую точку обратно в двумерное пространство по формуле $\hat{x}_i = \mu + z_i v_1$:
+                $$\hat{x}_1 = \begin{pmatrix} 3 \\ 3 \end{pmatrix} + (-2\sqrt{2})\frac{1}{\sqrt{2}}\begin{pmatrix} 1 \\ 1 \end{pmatrix} = \begin{pmatrix} 3 \\ 3 \end{pmatrix} - \begin{pmatrix} 2 \\ 2 \end{pmatrix} = \begin{pmatrix} 1 \\ 1 \end{pmatrix} = x_1 \quad (\text{невязка } 0)$$
+                $$\hat{x}_2 = \begin{pmatrix} 3 \\ 3 \end{pmatrix} + \left(-\frac{1}{\sqrt{2}}\right)\frac{1}{\sqrt{2}}\begin{pmatrix} 1 \\ 1 \end{pmatrix} = \begin{pmatrix} 3 \\ 3 \end{pmatrix} - \begin{pmatrix} 0.5 \\ 0.5 \end{pmatrix} = \begin{pmatrix} 2.5 \\ 2.5 \end{pmatrix}$$
+                $$\hat{x}_3 = \begin{pmatrix} 3 \\ 3 \end{pmatrix} + \left(-\frac{1}{\sqrt{2}}\right)\frac{1}{\sqrt{2}}\begin{pmatrix} 1 \\ 1 \end{pmatrix} = \begin{pmatrix} 3 \\ 3 \end{pmatrix} - \begin{pmatrix} 0.5 \\ 0.5 \end{pmatrix} = \begin{pmatrix} 2.5 \\ 2.5 \end{pmatrix}$$
+                $$\hat{x}_4 = \begin{pmatrix} 3 \\ 3 \end{pmatrix} + (3\sqrt{2})\frac{1}{\sqrt{2}}\begin{pmatrix} 1 \\ 1 \end{pmatrix} = \begin{pmatrix} 3 \\ 3 \end{pmatrix} + \begin{pmatrix} 3 \\ 3 \end{pmatrix} = \begin{pmatrix} 6 \\ 6 \end{pmatrix} = x_4 \quad (\text{невязка } 0)$$
+                <br>
+                Суммарная квадратичная ошибка реконструкции выборки:
+                $$\|X - \hat{X}\|_F^2 = \sum_{i=1}^4 \|x_i - \hat{x}_i\|^2 = 0 + \left((2-2.5)^2 + (3-2.5)^2\right) + \left((3-2.5)^2 + (2-2.5)^2\right) + 0$$
+                $$\|X - \hat{X}\|_F^2 = 0 + (0.25 + 0.25) + (0.25 + 0.25) + 0 = 0.5 + 0.5 = 1.0$$
+                <div style="font-size:0.9rem; color:var(--text-secondary); margin-top:0.6rem; padding:0.6rem 0.8rem; background:rgba(0,0,0,0.02); border-left:3px solid var(--accent-primary); border-radius:4px;">
+                    <b>Тождество Эккарта-Юнга для PCA:</b>
+                    Сумма квадратов ошибок реконструкции строго равна произведению числа степеней свободы выборки на отброшенные собственные значения:
+                    $$\|X - \hat{X}\|_F^2 = (N - 1) \cdot \lambda_2 = 3 \cdot \frac{1}{3} = 1.0 \equiv 1.0$$
+                    Это демонстрирует фундаментальное свойство PCA: ортогональная проекция на первые $k$ компонент гарантирует <b>минимально возможную</b> среднеквадратичную ошибку восстановления среди всех аффинных подпространств размерности $k$.
+                </div>
+            </div>
+
+
             <!-- Интерактивный стенд: Пошаговый пайплайн PCA -->
             <div class="interactive-card" style="margin-top:1.5rem;">
                 <div class="card-title-row">
@@ -4075,8 +4291,15 @@
                     <span class="badge">Step-by-Step PCA Pipeline</span>
                 </div>
                 <p style="font-size:0.92rem; color:var(--text-muted); margin-bottom:1rem;">
-                    Пройдите весь путь алгоритма PCA шаг за шагом: от сырых нецентрированных данных до проекции и восстановления. Управляйте шагами кнопками ниже и настраивайте угол наклона облака данных:
+                    Пройдите весь путь алгоритма PCA шаг за шагом: от сырых нецентрированных данных до проекции и восстановления. Выберите режим выборки (пример вычислений с 4 точками или интерактивное облако точек):
                 </p>
+                <div class="controls-grid" style="align-items:center; margin-bottom: 0.8rem;">
+                    <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
+                        <span style="font-size:0.88rem; font-weight:600; color:var(--text-primary);">Набор данных:</span>
+                        <button class="btn btn-primary" id="btn-pca-mode-example">Пример вычислений (4 точки)</button>
+                        <button class="btn btn-secondary" id="btn-pca-mode-cloud">Облако данных (80 точек)</button>
+                    </div>
+                </div>
                 <div class="controls-grid" style="align-items:center;">
                     <div style="display:flex; gap:0.4rem; flex-wrap:wrap;">
                         <button class="btn btn-secondary" id="btn-pca-step1">Шаг 1: Исходные данные $X$</button>
@@ -4086,7 +4309,7 @@
                         <button class="btn btn-primary" id="btn-pca-step5">Шаг 5: Восстановление $\hat{X}$</button>
                     </div>
                 </div>
-                <div class="controls-grid" style="margin-top:1rem;">
+                <div id="pca-sliders-container" class="controls-grid" style="margin-top:1rem; display:none;">
                     <div class="control-group">
                         <label>Угол наклона данных ($\theta$): <span id="val-pca-angle">35</span>°</label>
                         <input type="range" id="slider-pca-angle" min="0" max="90" value="35" step="5">
@@ -4096,7 +4319,7 @@
                         <input type="range" id="slider-pca-noise" min="0.05" max="0.8" value="0.30" step="0.05">
                     </div>
                 </div>
-                <div id="plot-pca-stepper" class="plot-container" style="margin-top:1rem;"></div>
+                <div id="plot-pca-stepper" class="plot-container" style="margin-top:1rem; background:#ffffff; border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,0.06);"></div>
                 <div id="pca-step-explanation" class="callout callout-theory" style="margin-top:1rem;"></div>
             </div>
         </section>
@@ -4571,6 +4794,7 @@
     <!-- Модуль пошагового обучения и проверочных вопросов -->
     <script src="js/quiz-data.js?v=2.4"></script>
     <script src="js/quiz-engine.js?v=2.4"></script>
+<script src="js/security.js?v=1.0"></script>
 
 
     <!-- Модальное окно загрузки и конвертации Word (.docx) в модуль курса -->

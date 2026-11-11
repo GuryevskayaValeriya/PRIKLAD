@@ -68,7 +68,7 @@
             totalSubmodules: 11,
             introSecId: 'sec-3-intro',
             introNextTarget: 'sec-3-1',
-            introCardTitle: '🚀 Готовы перейти к материалу лекции?',
+            introCardTitle: 'Готовы перейти к материалу лекции?',
             introCardDesc: 'Первая тема: Мотивация сжатия данных и спектральная теория',
             introBtnText: 'Начать тему 3.1: Зачем сжимать данные? →',
             getQuizzes: () => (window.MODULE3_QUIZZES || {})

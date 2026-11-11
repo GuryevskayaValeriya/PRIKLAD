@@ -1050,8 +1050,12 @@ function triggerRenderForSection(sectionId) {
         loadLab2Variant(parseInt(document.getElementById('lab2-student-id')?.value || 1));
     } else if (sectionId === 'sec-3-2') {
         renderEigenvalues2D(document.getElementById('select-eigen-preset')?.value || 'symm_positive', parseFloat(document.getElementById('slider-eigen-vec-angle')?.value || 30));
+    } else if (sectionId === 'sec-3-4') {
+        renderSpectralDecomposition2D(currentSpectralStep || 3);
     } else if (sectionId === 'sec-3-6') {
         renderSVDDecomposition2D(currentSvdStep || 3);
+    } else if (sectionId === 'sec-3-7') {
+        renderConditionSimulator();
     } else if (sectionId === 'sec-3-8') {
         renderEckartYoungCompression(parseInt(document.getElementById('slider-eckart-k')?.value || 2), document.getElementById('select-eckart-pattern')?.value || 'smooth_cross');
     } else if (sectionId === 'sec-3-9') {
@@ -1542,11 +1546,41 @@ document.addEventListener('DOMContentLoaded', () => {
     selectEigen?.addEventListener('change', updateEigenPlot);
     sliderEigenAngle?.addEventListener('input', updateEigenPlot);
 
+    // 3.4 Спектральная декомпозиция симметричной матрицы A = Q Λ Qᵀ
+    document.getElementById('btn-spectral-step0')?.addEventListener('click', () => renderSpectralDecomposition2D(0));
+    document.getElementById('btn-spectral-step1')?.addEventListener('click', () => renderSpectralDecomposition2D(1));
+    document.getElementById('btn-spectral-step2')?.addEventListener('click', () => renderSpectralDecomposition2D(2));
+    document.getElementById('btn-spectral-step3')?.addEventListener('click', () => renderSpectralDecomposition2D(3));
+
     // 3.5 SVD 2D Шаги
     document.getElementById('btn-svd-step0')?.addEventListener('click', () => renderSVDDecomposition2D(0));
     document.getElementById('btn-svd-step1')?.addEventListener('click', () => renderSVDDecomposition2D(1));
     document.getElementById('btn-svd-step2')?.addEventListener('click', () => renderSVDDecomposition2D(2));
     document.getElementById('btn-svd-step3')?.addEventListener('click', () => renderSVDDecomposition2D(3));
+
+    // 3.7 Интерактивный симулятор обусловленности СЛАУ и псевдообращения
+    const sliderCondAngle = document.getElementById('slider-cond-angle');
+    const sliderCondNoise = document.getElementById('slider-cond-noise');
+    const updateCondSimPlot = rafThrottle(() => {
+        const ang = parseFloat(sliderCondAngle?.value || 45);
+        const nse = parseFloat(sliderCondNoise?.value || 3);
+        renderConditionSimulator(ang, nse);
+    });
+    sliderCondAngle?.addEventListener('input', updateCondSimPlot);
+    sliderCondNoise?.addEventListener('input', updateCondSimPlot);
+
+    document.getElementById('btn-cond-preset-ideal')?.addEventListener('click', () => {
+        if (sliderCondAngle) sliderCondAngle.value = 90;
+        renderConditionSimulator(90, parseFloat(sliderCondNoise?.value || 3));
+    });
+    document.getElementById('btn-cond-preset-medium')?.addEventListener('click', () => {
+        if (sliderCondAngle) sliderCondAngle.value = 45;
+        renderConditionSimulator(45, parseFloat(sliderCondNoise?.value || 3));
+    });
+    document.getElementById('btn-cond-preset-bad')?.addEventListener('click', () => {
+        if (sliderCondAngle) sliderCondAngle.value = 5;
+        renderConditionSimulator(5, parseFloat(sliderCondNoise?.value || 3));
+    });
 
     // 3.7 Низкоранговое сжатие Эккарта-Юнга
     const sliderEckartK = document.getElementById('slider-eckart-k');
@@ -1575,6 +1609,31 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     sliderPcaAngle?.addEventListener('input', updatePcaPlot);
     sliderPcaNoise?.addEventListener('input', updatePcaPlot);
+
+    // Переключение режима PCA: пример из лекции (4 точки) vs облако данных (80 точек)
+    const btnModeExample = document.getElementById('btn-pca-mode-example');
+    const btnModeCloud = document.getElementById('btn-pca-mode-cloud');
+    const pcaSlidersContainer = document.getElementById('pca-sliders-container');
+
+    btnModeExample?.addEventListener('click', () => {
+        currentPcaMode = 'example';
+        btnModeExample.className = 'btn btn-primary';
+        if (btnModeCloud) btnModeCloud.className = 'btn btn-secondary';
+        if (pcaSlidersContainer) pcaSlidersContainer.style.display = 'none';
+        const ang = parseFloat(sliderPcaAngle?.value || 35);
+        const nse = parseFloat(sliderPcaNoise?.value || 0.3);
+        renderPCAStepper(currentPcaStep || 5, ang, nse);
+    });
+
+    btnModeCloud?.addEventListener('click', () => {
+        currentPcaMode = 'cloud';
+        btnModeCloud.className = 'btn btn-primary';
+        if (btnModeExample) btnModeExample.className = 'btn btn-secondary';
+        if (pcaSlidersContainer) pcaSlidersContainer.style.display = 'grid';
+        const ang = parseFloat(sliderPcaAngle?.value || 35);
+        const nse = parseFloat(sliderPcaNoise?.value || 0.3);
+        renderPCAStepper(currentPcaStep || 5, ang, nse);
+    });
 
     document.getElementById('btn-pca-step1')?.addEventListener('click', () => updatePcaStep(1));
     document.getElementById('btn-pca-step2')?.addEventListener('click', () => updatePcaStep(2));
@@ -1611,7 +1670,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Первичный рендер визуализаций Модуля 3
     renderEigenvalues2D('symm_positive', 30);
+    renderSpectralDecomposition2D(3);
     renderSVDDecomposition2D(3);
+    renderConditionSimulator(45, 3);
     renderEckartYoungCompression(2, 'smooth_cross');
     renderPCAStepper(5, 35, 0.3);
     checkBroadcasting('16, 3, 64, 64', '3, 1, 1');
@@ -4948,6 +5009,177 @@ function renderEigenvalues2D(presetKey, testAngleDeg) {
     }
 }
 
+// --- 1.5. РЕНДЕР: СПЕКТРАЛЬНАЯ ДЕКОМПОЗИЦИЯ A = Q Λ Qᵀ В 4 ШАГА (ПУНКТ 3.4) ---
+let currentSpectralStep = 3;
+function renderSpectralDecomposition2D(step) {
+    currentSpectralStep = step;
+    const plotEl = document.getElementById('plot-spectral-geometry');
+    if (!plotEl) return;
+
+    for (let i = 0; i <= 3; i++) {
+        const btn = document.getElementById(`btn-spectral-step${i}`);
+        if (btn) {
+            btn.className = (i === step) ? 'btn btn-primary' : 'btn btn-secondary';
+        }
+    }
+
+    // Симметричная матрица из примера 3.4: A = [[3, 1], [1, 3]]
+    // Собственные значения: l1 = 4, l2 = 2
+    // Собственные векторы: q1 = (1, 1)/sqrt(2), q2 = (-1, 1)/sqrt(2)
+    const a = 3, b = 1, c = 1, d = 3;
+    const l1 = 4, l2 = 2;
+    const invSqrt2 = 1 / Math.SQRT2; // ≈ 0.70710678
+    const q1 = [invSqrt2, invSqrt2];
+    const q2 = [-invSqrt2, invSqrt2];
+
+    const nPoints = 140;
+    const xs = [], ys = [];
+    const baseXs = [], baseYs = [];
+    let vec1 = [0, 0], vec2 = [0, 0];
+    let label1 = '', label2 = '';
+
+    for (let i = 0; i <= nPoints; i++) {
+        const phi = (i / nPoints) * 2 * Math.PI;
+        const x0 = Math.cos(phi);
+        const y0 = Math.sin(phi);
+        baseXs.push(x0);
+        baseYs.push(y0);
+
+        let curX = x0, curY = y0;
+        if (step === 0) {
+            // Шаг 0: Исходный единичный круг S¹ и собственные векторы q1, q2
+            curX = x0;
+            curY = y0;
+            vec1 = [q1[0], q1[1]];
+            vec2 = [q2[0], q2[1]];
+            label1 = `  <b>q₁</b> (${q1[0].toFixed(2)}, ${q1[1].toFixed(2)})ᵀ [‖q₁‖ = 1]`;
+            label2 = `  <b>q₂</b> (${q2[0].toFixed(2)}, ${q2[1].toFixed(2)})ᵀ [‖q₂‖ = 1]`;
+        } else if (step === 1) {
+            // Шаг 1: y = Qᵀ x0 — ортогональный поворот на -45°
+            curX = q1[0] * x0 + q1[1] * y0;
+            curY = q2[0] * x0 + q2[1] * y0;
+            vec1 = [1, 0];
+            vec2 = [0, 1];
+            label1 = `  <b>Qᵀ q₁ = e₁</b> (1, 0)ᵀ`;
+            label2 = `  <b>Qᵀ q₂ = e₂</b> (0, 1)ᵀ`;
+        } else if (step === 2) {
+            // Шаг 2: z = Λ Qᵀ x0 — масштабирование вдоль осей e₁, e₂ на λ₁ = 4, λ₂ = 2
+            const y1 = q1[0] * x0 + q1[1] * y0;
+            const y2 = q2[0] * x0 + q2[1] * y0;
+            curX = l1 * y1;
+            curY = l2 * y2;
+            vec1 = [l1, 0];
+            vec2 = [0, l2];
+            label1 = `  <b>λ₁ e₁</b> (${l1}, 0)ᵀ [длина 4]`;
+            label2 = `  <b>λ₂ e₂</b> (0, ${l2})ᵀ [длина 2]`;
+        } else if (step === 3) {
+            // Шаг 3: w = Q Λ Qᵀ x0 = A x0 — итоговый эллипс A(S¹)
+            curX = a * x0 + b * y0;
+            curY = c * x0 + d * y0;
+            vec1 = [q1[0] * l1, q1[1] * l1]; // [4/√2, 4/√2] ≈ [2.83, 2.83]
+            vec2 = [q2[0] * l2, q2[1] * l2]; // [-2/√2, 2/√2] ≈ [-1.41, 1.41]
+            label1 = `  <b>λ₁ q₁</b> (${vec1[0].toFixed(2)}, ${vec1[1].toFixed(2)})ᵀ [длина 4, 45°]`;
+            label2 = `  <b>λ₂ q₂</b> (${vec2[0].toFixed(2)}, ${vec2[1].toFixed(2)})ᵀ [длина 2, 135°]`;
+        }
+
+        xs.push(curX);
+        ys.push(curY);
+    }
+
+    const traces = [];
+
+    // Эталонный единичный круг (пунктир для сравнения на шагах 1, 2, 3)
+    if (step > 0) {
+        traces.push({
+            x: baseXs, y: baseYs,
+            mode: 'lines',
+            line: { color: '#d0c5b8', width: 1.5, dash: 'dot' },
+            name: 'Исходный круг S¹ (эталон)',
+            hoverinfo: 'skip'
+        });
+    }
+
+    // Главная деформированная кривая
+    traces.push({
+        x: xs, y: ys,
+        mode: 'lines',
+        line: { color: step === 3 ? '#5c3d28' : (step === 2 ? '#784c28' : '#8c6751'), width: 3.5 },
+        fill: 'toself',
+        fillcolor: 'rgba(123, 85, 64, 0.08)',
+        name: step === 3 ? 'Итоговый эллипс A(S¹)' : (step === 2 ? 'Канонический эллипс Λ(S¹)' : 'Единичный круг S¹')
+    });
+
+    // Вектор 1 (первое собственное направление, терракотово-кофейный)
+    traces.push({
+        x: [0, vec1[0]], y: [0, vec1[1]],
+        mode: 'lines+markers+text',
+        line: { color: '#8c4328', width: 4 },
+        marker: { size: [0, 9], color: '#8c4328' },
+        text: ['', label1],
+        textposition: vec1[1] < 0 ? 'bottom right' : 'top right',
+        textfont: { size: 12.5, color: '#6e2d17', family: 'Inter, sans-serif' },
+        name: step >= 2 ? 'Главная полуось (λ₁ = 4)' : 'Вектор q₁'
+    });
+
+    // Вектор 2 (второе собственное направление, карамельно-кофейный)
+    traces.push({
+        x: [0, vec2[0]], y: [0, vec2[1]],
+        mode: 'lines+markers+text',
+        line: { color: '#b07d39', width: 4 },
+        marker: { size: [0, 9], color: '#b07d39' },
+        text: ['', label2],
+        textposition: 'top left',
+        textfont: { size: 12.5, color: '#7c511a', family: 'Inter, sans-serif' },
+        name: step >= 2 ? 'Малая полуось (λ₂ = 2)' : 'Вектор q₂'
+    });
+
+    const stepTitles = [
+        'Шаг 0: Единичный круг S¹ и ортогональные собственные векторы q₁, q₂',
+        'Шаг 1: Применение ортогональной матрицы Qᵀ (поворот на -45° к стандартным осям e₁, e₂)',
+        'Шаг 2: Применение диагональной матрицы Λ (растяжение вдоль осей на λ₁ = 4 и λ₂ = 2)',
+        'Шаг 3: Финальный обратный поворот Q (итоговый эллипс: A = Q Λ Qᵀ, полуоси длины 4 и 2)'
+    ];
+
+    const layout = {
+        title: { text: `<b>${stepTitles[step]}</b>`, font: { size: 13.5, color: '#2a1d17', family: 'Inter, sans-serif' } },
+        height: 480,
+        autosize: true,
+        paper_bgcolor: '#ffffff',
+        plot_bgcolor: '#ffffff',
+        xaxis: { title: 'Координата 1', range: [-4.8, 4.8], zeroline: true, zerolinecolor: '#d4c5b9', gridcolor: '#f0ece6' },
+        yaxis: { title: 'Координата 2', range: [-4.8, 4.8], zeroline: true, zerolinecolor: '#d4c5b9', gridcolor: '#f0ece6', scaleanchor: 'x', scaleratio: 1 },
+        margin: { l: 50, r: 30, t: 45, b: 50 },
+        legend: { orientation: 'h', y: -0.16, font: { size: 10, color: '#5c3d28' } },
+        showlegend: true
+    };
+
+    Plotly.react(plotEl, traces, layout, { responsive: true, displayModeBar: false });
+
+    // Пояснения для каждого шага
+    const expEl = document.getElementById('spectral-step-explanation');
+    if (expEl) {
+        const explanations = [
+            `<b>Шаг 0: Исходный единичный круг $S^1$ и собственный ортонормированный базис.</b><br>
+            Векторы $q_1 = \\frac{1}{\\sqrt{2}}(1, 1)^T$ и $q_2 = \\frac{1}{\\sqrt{2}}(-1, 1)^T$ взаимно ортогональны ($\\\\langle q_1, q_2 \\\\rangle = 0$, угол $90^\\circ$) и имеют единичную длину. По спектральной теореме любая симметричная матрица обладает полным ортонормированным базисом из собственных векторов.`,
+
+            `<b>Шаг 1: Ортогональный поворот $y = Q^T x$.</b><br>
+            Ортогональная матрица $Q^T = \\frac{1}{\\sqrt{2}}\\begin{pmatrix} 1 & 1 \\\\ -1 & 1 \\end{pmatrix}$ поворачивает плоскость на угол $-45^\\circ$. Собственные векторы совмещаются с координатными осями: $Q^T q_1 = e_1 = (1, 0)^T$, $Q^T q_2 = e_2 = (0, 1)^T$. Поскольку $Q^T$ ортогональна ($\\|Q^T x\\|_2 = \\|x\\|_2$), единичный круг остаётся единичным кругом без малейших искажений.`,
+
+            `<b>Шаг 2: Диагональное масштабирование $z = \\Lambda y = \\Lambda Q^T x$.</b><br>
+            Матрица $\\Lambda = \\begin{pmatrix} 4 & 0 \\\\ 0 & 2 \\end{pmatrix}$ диагональна. Оператор растягивает вектор вдоль оси $e_1$ в $\\lambda_1 = 4$ раза, а вдоль оси $e_2$ — в $\\lambda_2 = 2$ раза. Единичный круг трансформируется в канонический эллипс $\\frac{z_1^2}{4^2} + \\frac{z_2^2}{2^2} = 1$ с полуосями $a = 4$ и $b = 2$.`,
+
+            `<b>Шаг 3: Финальный обратный поворот $w = Q z = Q \\Lambda Q^T x = A x$.</b><br>
+            Матрица $Q = \\frac{1}{\\sqrt{2}}\\begin{pmatrix} 1 & -1 \\\\ 1 & 1 \\end{pmatrix}$ возвращает систему координат поворотом на $+45^\\circ$. Итоговый эллипс $A(S^1)$ имеет полуоси длины $\\lambda_1 = 4$ и $\\lambda_2 = 2$, направленные строго вдоль исходных собственных векторов $q_1$ и $q_2$. Это геометрически доказывает, что симметричный оператор не производит скоса (shear) — только поворот, растяжение по осям и обратный поворот!`
+        ];
+        expEl.innerHTML = explanations[step];
+        if (typeof safeRenderMath === 'function') {
+            safeRenderMath(expEl);
+        } else if (window.renderMathInElement) {
+            window.renderMathInElement(expEl, { delimiters: [{left: '$', right: '$', display: false}], throwOnError: false });
+        }
+    }
+}
+
 // --- 2. РЕНДЕР: SVD ДЕКОМПОЗИЦИЯ В 4 ШАГА (ДЛЯ МАТРИЦЫ ИЗ ЛЕКЦИИ) ---
 let currentSvdStep = 3;
 function renderSVDDecomposition2D(step) {
@@ -5112,6 +5344,289 @@ function renderSVDDecomposition2D(step) {
     }
 }
 
+// --- 2.5. ИНТЕРАКТИВНЫЙ СИМУЛЯТОР: ЧИСЛО ОБУСЛОВЛЕННОСТИ И ПСЕВДООБРАЩЕНИЕ A⁺ (ПУНКТ 3.7) ---
+function renderConditionSimulator(angleDeg, noisePercent) {
+    const plotB = document.getElementById('plot-cond-space-b');
+    const plotX = document.getElementById('plot-cond-space-x');
+    if (!plotB || !plotX) return;
+
+    if (angleDeg === undefined) {
+        angleDeg = parseFloat(document.getElementById('slider-cond-angle')?.value || 45);
+    }
+    if (noisePercent === undefined) {
+        noisePercent = parseFloat(document.getElementById('slider-cond-noise')?.value || 3);
+    }
+
+    const angleSpan = document.getElementById('val-cond-angle');
+    if (angleSpan) angleSpan.textContent = angleDeg;
+    const noiseSpan = document.getElementById('val-cond-noise');
+    if (noiseSpan) noiseSpan.textContent = noisePercent;
+
+    // Обновление состояния кнопок пресетов
+    const btnIdeal = document.getElementById('btn-cond-preset-ideal');
+    const btnMedium = document.getElementById('btn-cond-preset-medium');
+    const btnBad = document.getElementById('btn-cond-preset-bad');
+    if (btnIdeal && btnMedium && btnBad) {
+        btnIdeal.className = (angleDeg === 90) ? 'btn btn-primary' : 'btn btn-secondary';
+        btnMedium.className = (angleDeg === 45) ? 'btn btn-primary' : 'btn btn-secondary';
+        btnBad.className = (angleDeg === 5) ? 'btn btn-primary' : 'btn btn-secondary';
+    }
+
+    const theta = (angleDeg * Math.PI) / 180;
+    // Матрица A: a1 = [1, 0]^T, a2 = [cos(theta), sin(theta)]^T
+    const a1 = [1, 0];
+    const a2 = [Math.cos(theta), Math.sin(theta)];
+
+    // Истинное решение x* = [1, 1]^T
+    const xTrue = [1, 1];
+    const normXTrue = Math.SQRT2; // sqrt(2)
+
+    // Точная правая часть b = a1 + a2 = [1 + cos(theta), sin(theta)]^T
+    const bTrue = [1 + a2[0], a2[1]];
+    const normB = Math.sqrt(bTrue[0] * bTrue[0] + bTrue[1] * bTrue[1]); // 2 * cos(theta/2)
+
+    // Аналитические сингулярные числа для A
+    const halfTheta = theta / 2;
+    const s1 = Math.SQRT2 * Math.cos(halfTheta);
+    const s2 = Math.SQRT2 * Math.sin(halfTheta);
+    const kappa = s1 / s2; // ctg(theta / 2)
+
+    // Левые сингулярные векторы (базис в пространстве b)
+    const u1 = [Math.cos(halfTheta), Math.sin(halfTheta)];
+    const u2 = [Math.sin(halfTheta), -Math.cos(halfTheta)];
+
+    // Правые сингулярные векторы (базис в пространстве x)
+    const invSqrt2 = 1 / Math.SQRT2;
+    const v1 = [invSqrt2, invSqrt2];
+    const v2 = [invSqrt2, -invSqrt2];
+
+    // Величина возмущения в пространстве b
+    const relNoise = noisePercent / 100;
+    const deltaBNorm = relNoise * normB;
+
+    // Вектор возмущения по наихудшему направлению u2 (соответствует s2 = sigma_min)
+    const deltaB = [deltaBNorm * u2[0], deltaBNorm * u2[1]];
+    const bNoisy = [bTrue[0] + deltaB[0], bTrue[1] + deltaB[1]];
+
+    // Возмущение в решении: deltaX = (deltaBNorm / s2) * v2
+    const deltaXNorm = s2 > 1e-12 ? (deltaBNorm / s2) : 0;
+    const deltaX = [deltaXNorm * v2[0], deltaXNorm * v2[1]];
+    const xNoisy = [xTrue[0] + deltaX[0], xTrue[1] + deltaX[1]];
+
+    const relErrX = (deltaXNorm / normXTrue) * 100;
+    const amplification = relNoise > 0 ? ((relErrX / 100) / relNoise) : kappa;
+
+    // 1. Построение окружности шума вокруг bTrue в пространстве b
+    const nPoints = 90;
+    const circleBX = [], circleBY = [];
+    for (let i = 0; i <= nPoints; i++) {
+        const phi = (i / nPoints) * 2 * Math.PI;
+        circleBX.push(bTrue[0] + deltaBNorm * Math.cos(phi));
+        circleBY.push(bTrue[1] + deltaBNorm * Math.sin(phi));
+    }
+
+    // 2. Построение эллипса погрешности вокруг xTrue в пространстве x
+    const ellipseXX = [], ellipseXY = [];
+    for (let i = 0; i <= nPoints; i++) {
+        const phi = (i / nPoints) * 2 * Math.PI;
+        const c1 = (deltaBNorm * Math.cos(phi)) / s1;
+        const c2 = (deltaBNorm * Math.sin(phi)) / s2;
+        const ex = xTrue[0] + (c1 * v1[0] + c2 * v2[0]);
+        const ey = xTrue[1] + (c1 * v1[1] + c2 * v2[1]);
+        ellipseXX.push(ex);
+        ellipseXY.push(ey);
+    }
+
+    // График 1: Пространство измерений b
+    const tracesB = [
+        {
+            x: [0, a1[0]], y: [0, a1[1]],
+            mode: 'lines+markers',
+            line: { color: '#8c6751', width: 2.5, dash: 'dash' },
+            marker: { size: [0, 6], color: '#8c6751' },
+            name: 'Столбец a₁ (1, 0)'
+        },
+        {
+            x: [0, a2[0]], y: [0, a2[1]],
+            mode: 'lines+markers',
+            line: { color: '#a37d63', width: 2.5, dash: 'dash' },
+            marker: { size: [0, 6], color: '#a37d63' },
+            name: `Столбец a₂ (${a2[0].toFixed(2)}, ${a2[1].toFixed(2)})`
+        },
+        {
+            x: [0, bTrue[0]], y: [0, bTrue[1]],
+            mode: 'lines+markers',
+            line: { color: '#3c2415', width: 3.5 },
+            marker: { size: [0, 8], color: '#3c2415' },
+            name: 'Истинный b = Ax*'
+        },
+        {
+            x: circleBX, y: circleBY,
+            mode: 'lines',
+            line: { color: '#9e4736', width: 1.8, dash: 'dot' },
+            fill: 'toself',
+            fillcolor: 'rgba(158, 71, 54, 0.1)',
+            name: `Шум (‖Δb‖ = ${deltaBNorm.toFixed(3)})`
+        },
+        {
+            x: [0, bNoisy[0]], y: [0, bNoisy[1]],
+            mode: 'lines+markers',
+            line: { color: '#b35d49', width: 2.5 },
+            marker: { size: [0, 7], color: '#b35d49' },
+            name: 'Возмущённый b + Δb'
+        }
+    ];
+
+    const layoutB = {
+        title: {
+            text: '<b>График 1: Пространство измерений (Правая часть b ∈ ℝ²)</b>',
+            font: { family: 'Inter, sans-serif', size: 14, color: '#3c2415' }
+        },
+        height: 420,
+        autosize: true,
+        xaxis: {
+            title: 'b₁',
+            range: [-0.3, Math.max(2.4, bTrue[0] + deltaBNorm + 0.3)],
+            zeroline: true, zerolinecolor: '#d4c5b9',
+            gridcolor: '#f0ece6', tickfont: { size: 11, color: '#75523c' }
+        },
+        yaxis: {
+            title: 'b₂',
+            range: [-0.4, Math.max(1.8, bTrue[1] + deltaBNorm + 0.3)],
+            zeroline: true, zerolinecolor: '#d4c5b9',
+            gridcolor: '#f0ece6', tickfont: { size: 11, color: '#75523c' },
+            scaleanchor: 'x', scaleratio: 1
+        },
+        paper_bgcolor: '#ffffff',
+        plot_bgcolor: '#ffffff',
+        margin: { l: 50, r: 30, t: 45, b: 45 },
+        showlegend: true,
+        legend: { orientation: 'h', y: -0.18, font: { size: 10, color: '#5c3d28' } }
+    };
+
+    Plotly.react(plotB, tracesB, layoutB, { responsive: true, displayModeBar: false });
+
+    // График 2: Пространство решений x
+    const tracesX = [
+        {
+            x: [xTrue[0]], y: [xTrue[1]],
+            mode: 'markers+text',
+            marker: { size: 11, color: '#3c2415' },
+            text: ['  <b>x* = (1, 1)ᵀ</b>'],
+            textposition: 'top right',
+            name: 'Истинное x*'
+        },
+        {
+            x: ellipseXX, y: ellipseXY,
+            mode: 'lines',
+            line: { color: '#9e4736', width: 2 },
+            fill: 'toself',
+            fillcolor: 'rgba(158, 71, 54, 0.12)',
+            name: `Эллипс погрешности A⁺(Δb)`
+        },
+        {
+            x: [xTrue[0], xNoisy[0]], y: [xTrue[1], xNoisy[1]],
+            mode: 'lines+markers',
+            line: { color: '#b35d49', width: 3 },
+            marker: { size: [0, 8], color: '#b35d49' },
+            name: 'Смещение Δx = A⁺Δb'
+        },
+        {
+            x: [xNoisy[0]], y: [xNoisy[1]],
+            mode: 'markers+text',
+            marker: { size: 9, color: '#b35d49', symbol: 'diamond' },
+            text: [`  <b>x̃</b> (${xNoisy[0].toFixed(2)}, ${xNoisy[1].toFixed(2)})ᵀ`],
+            textposition: 'bottom right',
+            name: 'Возмущённое x̃'
+        }
+    ];
+
+    const maxExtent = Math.max(Math.abs(xNoisy[0] - 1), Math.abs(xNoisy[1] - 1), (deltaBNorm / s2), 0.5);
+    const pad = maxExtent * 1.35;
+
+    const layoutX = {
+        title: {
+            text: '<b>График 2: Пространство решений (Чувствительность x = A⁺b)</b>',
+            font: { family: 'Inter, sans-serif', size: 14, color: '#3c2415' }
+        },
+        height: 420,
+        autosize: true,
+        xaxis: {
+            title: 'x₁',
+            range: [1 - pad, 1 + pad],
+            zeroline: true, zerolinecolor: '#d4c5b9',
+            gridcolor: '#f0ece6', tickfont: { size: 11, color: '#75523c' }
+        },
+        yaxis: {
+            title: 'x₂',
+            range: [1 - pad, 1 + pad],
+            zeroline: true, zerolinecolor: '#d4c5b9',
+            gridcolor: '#f0ece6', tickfont: { size: 11, color: '#75523c' },
+            scaleanchor: 'x', scaleratio: 1
+        },
+        paper_bgcolor: '#ffffff',
+        plot_bgcolor: '#ffffff',
+        margin: { l: 50, r: 30, t: 45, b: 45 },
+        showlegend: true,
+        legend: { orientation: 'h', y: -0.18, font: { size: 10, color: '#5c3d28' } }
+    };
+
+    Plotly.react(plotX, tracesX, layoutX, { responsive: true, displayModeBar: false });
+
+    // 3. Вывод метрик и аналитики
+    const metricsEl = document.getElementById('cond-sim-metrics');
+    if (metricsEl) {
+        let statusBadge = '';
+        let statusComment = '';
+        if (kappa < 3) {
+            statusBadge = '<span style="display:inline-block; padding:0.25rem 0.65rem; background:#edf4eb; border:1px solid #cce2c9; color:#3b6e39; border-radius:6px; font-weight:700; font-size:0.85rem;">Идеальная / Высокая устойчивость</span>';
+            statusComment = 'Матрица близка к ортогональной. Ошибка в решении пропорциональна ошибке измерений, вычисления полностью стабильны.';
+        } else if (kappa < 20) {
+            statusBadge = '<span style="display:inline-block; padding:0.25rem 0.65rem; background:#fbf2e5; border:1px solid #ebd2b2; color:#855421; border-radius:6px; font-weight:700; font-size:0.85rem;">Умеренная чувствительность</span>';
+            statusComment = 'Угол между столбцами уменьшен. Погрешность измерений усиливается в несколько раз, но порядок решения сохраняется.';
+        } else {
+            statusBadge = '<span style="display:inline-block; padding:0.25rem 0.65rem; background:#fcece9; border:1px solid #f6ccc5; color:#a13b2c; border-radius:6px; font-weight:700; font-size:0.85rem;">Критическая неустойчивость (Ill-conditioned)</span>';
+            statusComment = 'Столбцы почти коллинеарны (матрица на грани вырождения). Крошечный шум измерений приводит к колоссальному смещению решения вдоль слабого сингулярного направления!';
+        }
+
+        metricsEl.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem; margin-bottom:0.8rem; border-bottom:1px solid var(--border-color, #e6ded7); padding-bottom:0.6rem;">
+                <span style="font-weight:700; color:#3c2415; font-size:1.02rem;">Спектральный анализ устойчивости СЛАУ:</span>
+                ${statusBadge}
+            </div>
+            <div class="metrics-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:0.75rem; margin-bottom:0.9rem;">
+                <div class="metric-box">
+                    <div class="metric-label">Сингулярные числа</div>
+                    <div class="metric-val" style="font-size:1.05rem;">$\\sigma_1 = ${s1.toFixed(3)}, \\; \\sigma_2 = ${s2.toFixed(3)}$</div>
+                    <div style="font-size:0.78rem; color:var(--text-muted); margin-top:0.2rem;">$\\sigma_{\\min} \\to 0$ при $\\theta \\to 0^\\circ$</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-label">Число обусловленности $\\kappa(A)$</div>
+                    <div class="metric-val" style="font-size:1.15rem; color:#5c3d28;">$\\kappa = ${kappa.toFixed(2)}$</div>
+                    <div style="font-size:0.78rem; color:var(--text-muted); margin-top:0.2rem;">$\\kappa(A) = \\operatorname{ctg}(\\theta/2)$</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-label">Шум правой части $\\frac{\\|\\Delta b\\|_2}{\\|b\\|_2}$</div>
+                    <div class="metric-val" style="font-size:1.05rem; color:#75523c;">${noisePercent.toFixed(1)}%</div>
+                    <div style="font-size:0.78rem; color:var(--text-muted); margin-top:0.2rem;">$\\|\\Delta b\\|_2 = ${deltaBNorm.toFixed(4)}$</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-label">Погрешность решения $\\frac{\\|\\Delta x\\|_2}{\\|x\\|_2}$</div>
+                    <div class="metric-val" style="font-size:1.15rem; color:${kappa >= 20 ? '#a13b2c' : '#5c3d28'};">${relErrX.toFixed(1)}%</div>
+                    <div style="font-size:0.78rem; color:var(--text-muted); margin-top:0.2rem;">Усиление в $\\times ${amplification.toFixed(1)}$ раз</div>
+                </div>
+            </div>
+            <p style="font-size:0.9rem; line-height:1.55; color:#5c3d28; margin:0;">
+                <b>Интерпретация:</b> ${statusComment} Теоретическая верхняя оценка усиления погрешности $\\kappa(A) \\cdot \\frac{\\|\\Delta b\\|_2}{\\|b\\|_2} = ${(kappa * relNoise * 100).toFixed(1)}\\%$ в точности совпадает с наблюдаемой погрешностью решения, так как вектор возмущения направлен вдоль правого сингулярного вектора $u_2$, соответствующего $\\sigma_{\\min}$.
+            </p>
+        `;
+        if (typeof safeRenderMath === 'function') {
+            safeRenderMath(metricsEl);
+        } else if (window.renderMathInElement) {
+            window.renderMathInElement(metricsEl, { delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}], throwOnError: false });
+        }
+    }
+}
 // --- 3. РЕНДЕР: СЖАТИЕ ПО ЭККАРТУ-ЮНГУ ---
 function renderEckartYoungCompression(kRank, patternType) {
     const k = parseInt(kRank) || 2;
@@ -5229,6 +5744,7 @@ function renderEckartYoungCompression(kRank, patternType) {
 
 // --- 4. РЕНДЕР: ДЕТАЛЬНЫЙ PCA ПО ШАГАМ (ШАГИ 1-5) ---
 let currentPcaStep = 5;
+let currentPcaMode = 'example'; // 'example' (4 точки) или 'cloud' (80 точек)
 
 function renderPCAStepper(step, angleDeg, noiseVal) {
     currentPcaStep = step;
@@ -5243,242 +5759,462 @@ function renderPCAStepper(step, angleDeg, noiseVal) {
         }
     }
 
-    const theta = (angleDeg || 35) * Math.PI / 180;
-    const noise = parseFloat(noiseVal) || 0.3;
-    const n = 80;
-
-    // Смещение центра масс (raw data не центрированы!)
-    const muX = 1.6;
-    const muY = 2.1;
-
-    // Генерация фиксированного детерминированного набора точек
-    const rawX = [], rawY = [];
-    const centX = [], centY = [];
-
-    for (let i = 0; i < n; i++) {
-        const u1 = (Math.sin(i * 12.9898) * 43758.5453) % 1;
-        const u2 = (Math.cos(i * 78.233) * 43758.5453) % 1;
-        const z1 = (u1 - 0.5) * 3.8;
-        const z2 = (u2 - 0.5) * noise * 3.8;
-
-        // Поворот на theta
-        const rx = z1 * Math.cos(theta) - z2 * Math.sin(theta);
-        const ry = z1 * Math.sin(theta) + z2 * Math.cos(theta);
-
-        centX.push(rx);
-        centY.push(ry);
-        rawX.push(rx + muX);
-        rawY.push(ry + muY);
-    }
-
-    // Собственные векторы ковариации
-    const v1_x = Math.cos(theta);
-    const v1_y = Math.sin(theta);
-    const v2_x = -Math.sin(theta);
-    const v2_y = Math.cos(theta);
-
-    const s1 = 2.0;
-    const s2 = noise * 2.0;
-    const var1 = s1 * s1;
-    const var2 = s2 * s2;
-    const evr = (var1 / (var1 + var2)) * 100;
-
     const traces = [];
+    let layout = {};
+    let stepTitle = '';
+    let explanationHtml = '';
 
-    if (step === 1) {
-        // ШАГ 1: Исходные нецентрированные данные
-        traces.push({
-            x: rawX, y: rawY,
-            mode: 'markers',
-            marker: { color: 'rgba(117, 82, 60, 0.75)', size: 7 },
-            name: 'Исходные объекты X'
-        });
-        traces.push({
-            x: [muX], y: [muY],
-            mode: 'markers',
-            marker: { color: '#b34a3b', size: 14, symbol: 'diamond' },
-            name: `Центр масс μ = (${muX.toFixed(2)}, ${muY.toFixed(2)})`
-        });
-        // Проекции центра на оси
-        traces.push({
-            x: [muX, muX, 0], y: [0, muY, muY],
-            mode: 'lines',
-            line: { color: 'rgba(179, 74, 59, 0.45)', dash: 'dot', width: 1.5 },
-            name: 'Координаты среднего μ'
-        });
-    } else if (step === 2) {
-        // ШАГ 2: Центрированные данные
-        traces.push({
-            x: centX, y: centY,
-            mode: 'markers',
-            marker: { color: 'rgba(95, 122, 78, 0.8)', size: 7 },
-            name: 'Центрированные данные X_c = X - μ'
-        });
-        traces.push({
-            x: [0], y: [0],
-            mode: 'markers',
-            marker: { color: '#5f7a4e', size: 12, symbol: 'cross' },
-            name: 'Новый центр (0, 0)'
-        });
-    } else if (step === 3) {
-        // ШАГ 3: Оси PC1 и PC2
-        traces.push({
-            x: centX, y: centY,
-            mode: 'markers',
-            marker: { color: 'rgba(126, 108, 96, 0.55)', size: 6 },
-            name: 'Центрированные данные'
-        });
-        // Эллипс рассеяния
-        const ellX = [], ellY = [];
-        for (let i = 0; i <= 60; i++) {
-            const phi = (i / 60) * 2 * Math.PI;
-            const ex = Math.cos(phi) * s1 * Math.cos(theta) - Math.sin(phi) * s2 * Math.sin(theta);
-            const ey = Math.cos(phi) * s1 * Math.sin(theta) + Math.sin(phi) * s2 * Math.cos(theta);
-            ellX.push(ex); ellY.push(ey);
+    if (currentPcaMode === 'example') {
+        // РЕЖИМ 1: ТОЧНЫЙ АНАЛИТИЧЕСКИЙ ПРИМЕР ИЗ ТЕОРИИ (4 ТОЧКИ)
+        const rawPts = [
+            { id: 'x₁', x: 1, y: 1 },
+            { id: 'x₂', x: 2, y: 3 },
+            { id: 'x₃', x: 3, y: 2 },
+            { id: 'x₄', x: 6, y: 6 }
+        ];
+        const muX = 3.0, muY = 3.0;
+        const centPts = [
+            { id: 'x_{c,1}', x: -2, y: -2, z: -2 * Math.SQRT2, rx: -2.0, ry: -2.0 },
+            { id: 'x_{c,2}', x: -1, y: 0, z: -1 / Math.SQRT2, rx: -0.5, ry: -0.5 },
+            { id: 'x_{c,3}', x: 0, y: -1, z: -1 / Math.SQRT2, rx: -0.5, ry: -0.5 },
+            { id: 'x_{c,4}', x: 3, y: 3, z: 3 * Math.SQRT2, rx: 3.0, ry: 3.0 }
+        ];
+        const recPts = [
+            { id: 'x̂₁', x: 1.0, y: 1.0 },
+            { id: 'x̂₂', x: 2.5, y: 2.5 },
+            { id: 'x̂₃', x: 2.5, y: 2.5 },
+            { id: 'x̂₄', x: 6.0, y: 6.0 }
+        ];
+
+        const v1 = [1 / Math.SQRT2, 1 / Math.SQRT2];
+        const v2 = [-1 / Math.SQRT2, 1 / Math.SQRT2];
+        const lambda1 = 9.0;
+        const lambda2 = 1.0 / 3.0;
+        const evr1 = (lambda1 / (lambda1 + lambda2)) * 100; // 96.43%
+
+        if (step === 1) {
+            stepTitle = 'Шаг 1: Исходные данные X = {(1,1), (2,3), (3,2), (6,6)} и центр масс μ = (3, 3)';
+            traces.push({
+                x: rawPts.map(p => p.x),
+                y: rawPts.map(p => p.y),
+                text: rawPts.map(p => `${p.id} (${p.x}, ${p.y})`),
+                textposition: ['bottom right', 'top left', 'bottom right', 'top left'],
+                mode: 'markers+text',
+                marker: { color: '#75523c', size: 12 },
+                name: 'Исходные объекты X'
+            });
+            traces.push({
+                x: [muX], y: [muY],
+                text: ['μ = (3, 3)'],
+                textposition: 'top right',
+                mode: 'markers+text',
+                marker: { color: '#b34a3b', size: 15, symbol: 'diamond' },
+                name: 'Центр выборки μ = (3, 3)'
+            });
+            traces.push({
+                x: [muX, muX, 0], y: [0, muY, muY],
+                mode: 'lines',
+                line: { color: 'rgba(179, 74, 59, 0.45)', dash: 'dot', width: 2 },
+                name: 'Координаты центра μ'
+            });
+
+            explanationHtml = `<b>Шаг 1: Исходные данные $X$.</b> Выборка содержит 4 объекта: $x_1(1,1), x_2(2,3), x_3(3,2), x_4(6,6)$. 
+            Центр тяжести выборки $\\mu = \\frac{1}{4}\\sum x_i = (3, 3)^T$ смещён относительно начала координат. 
+            <i>Важно:</i> Если производить разложение без центрирования, первая ось направится на вектор среднего $\\mu$, а не вдоль направления максимальной дисперсии.`;
+
+        } else if (step === 2) {
+            stepTitle = 'Шаг 2: Центрирование выборки X_c = X - μ (перенос центра в ноль)';
+            traces.push({
+                x: centPts.map(p => p.x),
+                y: centPts.map(p => p.y),
+                text: ['x_{c,1}(-2,-2)', 'x_{c,2}(-1,0)', 'x_{c,3}(0,-1)', 'x_{c,4}(3,3)'],
+                textposition: ['bottom right', 'top left', 'bottom right', 'top left'],
+                mode: 'markers+text',
+                marker: { color: '#5f7a4e', size: 12 },
+                name: 'Центрированные данные X_c'
+            });
+            traces.push({
+                x: [0], y: [0],
+                text: ['(0, 0)'],
+                textposition: 'top right',
+                mode: 'markers+text',
+                marker: { color: '#5c3d28', size: 14, symbol: 'cross' },
+                name: 'Новый центр (0, 0)'
+            });
+
+            explanationHtml = `<b>Шаг 2: Центрирование $X_c = X - \\mu$.</b> Вычитаем $(3, 3)^T$ из каждого наблюдения: 
+            $x_{c,1} = (-2,-2)^T$, $x_{c,2} = (-1,0)^T$, $x_{c,3} = (0,-1)^T$, $x_{c,4} = (3,3)^T$. 
+            Центр масс строго совпал с началом координат: $\\sum x_{c,i} = (0, 0)^T$. Теперь дисперсия измеряется напрямую относительно нуля.`;
+
+        } else if (step === 3) {
+            stepTitle = 'Шаг 3: Главные оси PC₁ (EVR = 96.43%) и PC₂ (EVR = 3.57%)';
+            traces.push({
+                x: centPts.map(p => p.x),
+                y: centPts.map(p => p.y),
+                text: ['x_{c,1}', 'x_{c,2}', 'x_{c,3}', 'x_{c,4}'],
+                textposition: 'top left',
+                mode: 'markers+text',
+                marker: { color: 'rgba(126, 108, 96, 0.7)', size: 9 },
+                name: 'Центрированные точки'
+            });
+            const ellX = [], ellY = [];
+            const r1 = Math.sqrt(lambda1); // 3.0
+            const r2 = Math.sqrt(lambda2); // 0.577
+            for (let i = 0; i <= 60; i++) {
+                const phi = (i / 60) * 2 * Math.PI;
+                const ex = Math.cos(phi) * r1 * v1[0] - Math.sin(phi) * r2 * (-v2[0]);
+                const ey = Math.cos(phi) * r1 * v1[1] + Math.sin(phi) * r2 * v2[1];
+                ellX.push(ex); ellY.push(ey);
+            }
+            traces.push({
+                x: ellX, y: ellY,
+                mode: 'lines',
+                line: { color: 'rgba(117, 82, 60, 0.45)', dash: 'dot', width: 2 },
+                name: 'Эллипс дисперсии ковариации'
+            });
+            traces.push({
+                x: [-r1 * v1[0], r1 * v1[0]],
+                y: [-r1 * v1[1], r1 * v1[1]],
+                mode: 'lines+markers',
+                line: { color: '#75523c', width: 4.5 },
+                marker: { size: 6 },
+                name: `PC₁: v₁=(1/√2, 1/√2) [λ₁=9.00, EVR=96.43%]`
+            });
+            traces.push({
+                x: [-r2 * v2[0], r2 * v2[0]],
+                y: [-r2 * v2[1], r2 * v2[1]],
+                mode: 'lines+markers',
+                line: { color: '#b34a3b', width: 3, dash: 'dash' },
+                marker: { size: 5 },
+                name: `PC₂: v₂=(-1/√2, 1/√2) [λ₂=0.33, EVR=3.57%]`
+            });
+
+            explanationHtml = `<b>Шаг 3: Спектральное разложение ковариационной матрицы $\\Sigma = \\frac{1}{3}X_c^T X_c$.</b> 
+            Матрица $\\Sigma = \\frac{1}{3}\\begin{pmatrix} 14 & 13 \\\\ 13 & 14 \\end{pmatrix}$. 
+            Собственные значения: $\\lambda_1 = 9$ (длина полуоси $\\sqrt{\\lambda_1} = 3$), $\\lambda_2 = 1/3 \\approx 0.333$. 
+            Ось $PC_1$ наклонена под углом $45^\\circ$ ($v_1 = \\frac{1}{\\sqrt{2}}(1,1)^T$) и аккумулирует <b>96.43%</b> общей дисперсии. 
+            Поперечная ось $PC_2$ содержит лишь <b>3.57%</b> дисперсии (шумовая компонента).`;
+
+        } else if (step === 4) {
+            stepTitle = 'Шаг 4: Ортогональная проекция точек на прямую PC₁ (z_i = ⟨x_{c,i}, v₁⟩)';
+            traces.push({
+                x: [-3.8, 3.8], y: [-3.8, 3.8],
+                mode: 'lines',
+                line: { color: '#75523c', width: 3.5 },
+                name: 'Прямая первой главной компоненты PC₁'
+            });
+            const dropX = [], dropY = [];
+            centPts.forEach(p => {
+                dropX.push(p.x, p.rx, null);
+                dropY.push(p.y, p.ry, null);
+            });
+            traces.push({
+                x: dropX, y: dropY,
+                mode: 'lines',
+                line: { color: '#b34a3b', width: 2, dash: 'dot' },
+                name: 'Ортогональные невязки e_i ⊥ PC₁'
+            });
+            traces.push({
+                x: centPts.map(p => p.x),
+                y: centPts.map(p => p.y),
+                text: ['x_{c,1}', 'x_{c,2}', 'x_{c,3}', 'x_{c,4}'],
+                textposition: ['bottom right', 'top left', 'bottom right', 'top left'],
+                mode: 'markers+text',
+                marker: { color: 'rgba(126, 108, 96, 0.6)', size: 9 },
+                name: 'Исходные x_{c,i}'
+            });
+            traces.push({
+                x: centPts.map(p => p.rx),
+                y: centPts.map(p => p.ry),
+                text: ['z₁v₁ (-2,-2)', 'z₂v₁ (-0.5,-0.5)', 'z₃v₁ (-0.5,-0.5)', 'z₄v₁ (3,3)'],
+                textposition: ['bottom left', 'top right', 'bottom left', 'top right'],
+                mode: 'markers+text',
+                marker: { color: '#5f7a4e', size: 12, symbol: 'diamond' },
+                name: 'Проекции z_i v₁ на подпространство'
+            });
+
+            explanationHtml = `<b>Шаг 4: Ортогональная проекция на $PC_1$.</b> Координаты проекций: 
+            $z_1 = -2\\sqrt{2} \\approx -2.83$, $z_2 = z_3 = -1/\\sqrt{2} \\approx -0.71$, $z_4 = 3\\sqrt{2} \\approx 4.24$. 
+            Точки $x_2$ и $x_3$ проецируются в одну и ту же координату $(-0.5, -0.5)^T$ на прямой $PC_1$. 
+            Дисперсия одномерных координат: $S_z^2 = \\frac{1}{3}\\sum z_i^2 = \\frac{1}{3}(8 + 0.5 + 0.5 + 18) = 9 = \\lambda_1$. Дисперсия проекций строго равна $\\lambda_1$!`;
+
+        } else if (step === 5) {
+            stepTitle = 'Шаг 5: Восстановление x̂ = μ + z v₁ᵀ (ошибка ||X - X̂||_F² = 1.0)';
+            traces.push({
+                x: rawPts.map(p => p.x),
+                y: rawPts.map(p => p.y),
+                text: ['x₁(1,1)', 'x₂(2,3)', 'x₃(3,2)', 'x₄(6,6)'],
+                textposition: ['bottom right', 'top left', 'bottom right', 'top left'],
+                mode: 'markers+text',
+                marker: { color: 'rgba(126, 108, 96, 0.7)', size: 10 },
+                name: 'Исходные объекты X'
+            });
+            traces.push({
+                x: recPts.map(p => p.x),
+                y: recPts.map(p => p.y),
+                text: ['x̂₁(1,1)', 'x̂₂(2.5,2.5)', 'x̂₃(2.5,2.5)', 'x̂₄(6,6)'],
+                textposition: ['top left', 'bottom right', 'top left', 'bottom right'],
+                mode: 'markers+text',
+                marker: { color: '#5f7a4e', size: 13, symbol: 'star' },
+                name: 'Восстановленные объекты X̂'
+            });
+            const errSegX = [], errSegY = [];
+            for (let i = 0; i < 4; i++) {
+                errSegX.push(rawPts[i].x, recPts[i].x, null);
+                errSegY.push(rawPts[i].y, recPts[i].y, null);
+            }
+            traces.push({
+                x: errSegX, y: errSegY,
+                mode: 'lines',
+                line: { color: '#b34a3b', width: 2.5 },
+                name: 'Ошибка реконструкции ||x_i - x̂_i||'
+            });
+            traces.push({
+                x: [-0.5, 7.5], y: [-0.5, 7.5],
+                mode: 'lines',
+                line: { color: '#75523c', width: 2, dash: 'dot' },
+                name: 'Подпространство модели: y = x'
+            });
+            traces.push({
+                x: [muX], y: [muY],
+                mode: 'markers',
+                marker: { color: '#b34a3b', size: 12, symbol: 'diamond' },
+                name: 'Центр выборки μ = (3,3)'
+            });
+
+            explanationHtml = `<b>Шаг 5: Восстановление $\\hat{X} = \\mathbf{1}\\mu^T + z v_1^T$.</b> Получаем приближённые объекты: 
+            $\\hat{x}_1 = (1, 1)^T$ (точно совпал!), $\\hat{x}_2 = (2.5, 2.5)^T$, $\\hat{x}_3 = (2.5, 2.5)^T$, $\\hat{x}_4 = (6, 6)^T$ (точно совпал!). 
+            Суммарная квадратичная ошибка реконструкции выборки: 
+            $\\|X - \\hat{X}\\|_F^2 = 0 + 0.5 + 0.5 + 0 = 1.0$. 
+            <b>Теорема Эккарта-Юнга проверена:</b> $(N - 1)\\lambda_2 = 3 \\cdot \\frac{1}{3} = 1.0$. Ошибка реконструкции в точности равна сумме отброшенных собственных чисел!`;
         }
-        traces.push({
-            x: ellX, y: ellY,
-            mode: 'lines',
-            line: { color: 'rgba(117, 82, 60, 0.4)', dash: 'dot', width: 2 },
-            name: 'Эллипс ковариации'
-        });
-        // Стрелка PC1
-        traces.push({
-            x: [-v1_x * s1, v1_x * s1], y: [-v1_y * s1, v1_y * s1],
-            mode: 'lines',
-            line: { color: '#75523c', width: 4 },
-            name: `PC₁ (λ₁ = ${var1.toFixed(2)}, EVR = ${evr.toFixed(1)}%)`
-        });
-        // Стрелка PC2
-        traces.push({
-            x: [-v2_x * s2, v2_x * s2], y: [-v2_y * s2, v2_y * s2],
-            mode: 'lines',
-            line: { color: '#b34a3b', width: 2.5, dash: 'dash' },
-            name: `PC₂ (λ₂ = ${var2.toFixed(2)})`
-        });
-    } else if (step === 4) {
-        // ШАГ 4: Проекция на PC1
-        const projSegX = [], projSegY = [];
-        const projPointsX = [], projPointsY = [];
+
+        const rangeLim = (step === 1 || step === 5) ? [-0.5, 7.5] : [-4.0, 4.0];
+        layout = {
+            title: { text: stepTitle, font: { size: 13.5, color: '#2a1d17' } },
+            height: 480,
+            autosize: true,
+            paper_bgcolor: '#ffffff',
+            plot_bgcolor: '#ffffff',
+            xaxis: { title: 'Признак x₁', range: rangeLim, zeroline: true, zerolinecolor: '#d4c5b9', gridcolor: '#f0ece6' },
+            yaxis: { title: 'Признак x₂', range: rangeLim, zeroline: true, zerolinecolor: '#d4c5b9', gridcolor: '#f0ece6', scaleanchor: 'x' },
+            margin: { l: 50, r: 25, t: 45, b: 65 },
+            legend: { orientation: 'h', y: -0.18, font: { size: 10.5 } },
+            showlegend: true
+        };
+
+    } else {
+        // РЕЖИМ 2: СИНТЕТИЧЕСКОЕ ОБЛАКО ДАННЫХ (80 ТОЧЕК)
+        const theta = (angleDeg || 35) * Math.PI / 180;
+        const noise = parseFloat(noiseVal) || 0.3;
+        const n = 80;
+
+        const muX = 1.6;
+        const muY = 2.1;
+
+        const rawX = [], rawY = [];
+        const centX = [], centY = [];
 
         for (let i = 0; i < n; i++) {
-            const z = centX[i] * v1_x + centY[i] * v1_y;
-            const px = z * v1_x;
-            const py = z * v1_y;
-            projSegX.push(centX[i], px, null);
-            projSegY.push(centY[i], py, null);
-            projPointsX.push(px);
-            projPointsY.push(py);
+            const u1 = (Math.sin(i * 12.9898) * 43758.5453) % 1;
+            const u2 = (Math.cos(i * 78.233) * 43758.5453) % 1;
+            const z1 = (u1 - 0.5) * 3.8;
+            const z2 = (u2 - 0.5) * noise * 3.8;
+
+            const rx = z1 * Math.cos(theta) - z2 * Math.sin(theta);
+            const ry = z1 * Math.sin(theta) + z2 * Math.cos(theta);
+
+            centX.push(rx);
+            centY.push(ry);
+            rawX.push(rx + muX);
+            rawY.push(ry + muY);
         }
 
-        traces.push({
-            x: [-v1_x * 3.5, v1_x * 3.5], y: [-v1_y * 3.5, v1_y * 3.5],
-            mode: 'lines',
-            line: { color: '#75523c', width: 3 },
-            name: 'Подпространство PC₁'
-        });
-        traces.push({
-            x: projSegX, y: projSegY,
-            mode: 'lines',
-            line: { color: 'rgba(179, 74, 59, 0.35)', width: 1, dash: 'dot' },
-            name: 'Остаточные невязки e ⊥ PC₁',
-            hoverinfo: 'none'
-        });
-        traces.push({
-            x: centX, y: centY,
-            mode: 'markers',
-            marker: { color: 'rgba(126, 108, 96, 0.45)', size: 5 },
-            name: 'Исходные центрированные'
-        });
-        traces.push({
-            x: projPointsX, y: projPointsY,
-            mode: 'markers',
-            marker: { color: '#5f7a4e', size: 7 },
-            name: 'Проекции z_i = ⟨x_i, v₁⟩'
-        });
-    } else if (step === 5) {
-        // ШАГ 5: Восстановление данных
-        const recX = [], recY = [];
-        const recSegX = [], recSegY = [];
+        const v1_x = Math.cos(theta);
+        const v1_y = Math.sin(theta);
+        const v2_x = -Math.sin(theta);
+        const v2_y = Math.cos(theta);
 
-        for (let i = 0; i < n; i++) {
-            const z = centX[i] * v1_x + centY[i] * v1_y;
-            const rx = muX + z * v1_x;
-            const ry = muY + z * v1_y;
-            recX.push(rx);
-            recY.push(ry);
-            recSegX.push(rawX[i], rx, null);
-            recSegY.push(rawY[i], ry, null);
+        const s1 = 2.0;
+        const s2 = noise * 2.0;
+        const var1 = s1 * s1;
+        const var2 = s2 * s2;
+        const evr = (var1 / (var1 + var2)) * 100;
+
+        if (step === 1) {
+            traces.push({
+                x: rawX, y: rawY,
+                mode: 'markers',
+                marker: { color: 'rgba(117, 82, 60, 0.75)', size: 7 },
+                name: 'Исходные объекты X'
+            });
+            traces.push({
+                x: [muX], y: [muY],
+                mode: 'markers',
+                marker: { color: '#b34a3b', size: 14, symbol: 'diamond' },
+                name: `Центр масс μ = (${muX.toFixed(2)}, ${muY.toFixed(2)})`
+            });
+            traces.push({
+                x: [muX, muX, 0], y: [0, muY, muY],
+                mode: 'lines',
+                line: { color: 'rgba(179, 74, 59, 0.45)', dash: 'dot', width: 1.5 },
+                name: 'Координаты среднего μ'
+            });
+            stepTitle = 'Шаг 1: Исходные данные X (80 точек) и центр масс μ';
+            explanationHtml = `<b>Шаг 1: Исходные данные $X$.</b> Выборочный центр масс $\\mu = (${muX.toFixed(2)}, ${muY.toFixed(2)})$ не равен нулю. 
+            <i>Критическая ловушка:</i> Если применить SVD к нецентрированным данным, первая найденная компонента направится не вдоль оси максимального разброса, а соединит начало координат с облаком данных, что исказит весь анализ!`;
+        } else if (step === 2) {
+            traces.push({
+                x: centX, y: centY,
+                mode: 'markers',
+                marker: { color: 'rgba(95, 122, 78, 0.8)', size: 7 },
+                name: 'Центрированные данные X_c = X - μ'
+            });
+            traces.push({
+                x: [0], y: [0],
+                mode: 'markers',
+                marker: { color: '#5f7a4e', size: 12, symbol: 'cross' },
+                name: 'Новый центр (0, 0)'
+            });
+            stepTitle = 'Шаг 2: Центрирование данных X_c = X - μ (перенос в начало координат)';
+            explanationHtml = `<b>Шаг 2: Центрирование $X_c = X - \\mu$.</b> Вычитаем среднее значение каждого признака. Облако сдвинулось в начало координат: $\\mathbb{E}[X_c] = 0$. 
+            Теперь выборочная ковариационная матрица $\\Sigma = \\frac{1}{N-1} X_c^T X_c$ строго измеряет взаимный разброс относительно математического ожидания.`;
+        } else if (step === 3) {
+            traces.push({
+                x: centX, y: centY,
+                mode: 'markers',
+                marker: { color: 'rgba(126, 108, 96, 0.55)', size: 6 },
+                name: 'Центрированные данные'
+            });
+            const ellX = [], ellY = [];
+            for (let i = 0; i <= 60; i++) {
+                const phi = (i / 60) * 2 * Math.PI;
+                const ex = Math.cos(phi) * s1 * Math.cos(theta) - Math.sin(phi) * s2 * Math.sin(theta);
+                const ey = Math.cos(phi) * s1 * Math.sin(theta) + Math.sin(phi) * s2 * Math.cos(theta);
+                ellX.push(ex); ellY.push(ey);
+            }
+            traces.push({
+                x: ellX, y: ellY,
+                mode: 'lines',
+                line: { color: 'rgba(117, 82, 60, 0.4)', dash: 'dot', width: 2 },
+                name: 'Эллипс ковариации'
+            });
+            traces.push({
+                x: [-v1_x * s1, v1_x * s1], y: [-v1_y * s1, v1_y * s1],
+                mode: 'lines',
+                line: { color: '#75523c', width: 4 },
+                name: `PC₁ (λ₁ = ${var1.toFixed(2)}, EVR = ${evr.toFixed(1)}%)`
+            });
+            traces.push({
+                x: [-v2_x * s2, v2_x * s2], y: [-v2_y * s2, v2_y * s2],
+                mode: 'lines',
+                line: { color: '#b34a3b', width: 2.5, dash: 'dash' },
+                name: `PC₂ (λ₂ = ${var2.toFixed(2)})`
+            });
+            stepTitle = 'Шаг 3: Вычисление ковариации Σ и главных осей PC₁, PC₂';
+            explanationHtml = `<b>Шаг 3: Главные компоненты $PC_1, PC_2$.</b> По спектральной теореме симметричная матрица ковариации $\\Sigma$ обладает ортонормированным базисом собственных векторов $v_1, v_2$. 
+            Вектор $v_1$ указывает направление <b>максимальной дисперсии</b> ($\\lambda_1 = ${var1.toFixed(2)}$), а вектор $v_2$ строго перпендикулярен ему ($\\lambda_2 = ${var2.toFixed(2)}$). Направление $PC_1$ объясняет <b>${evr.toFixed(1)}%</b> всей дисперсии выборки!`;
+        } else if (step === 4) {
+            const projSegX = [], projSegY = [];
+            const projPointsX = [], projPointsY = [];
+
+            for (let i = 0; i < n; i++) {
+                const z = centX[i] * v1_x + centY[i] * v1_y;
+                const px = z * v1_x;
+                const py = z * v1_y;
+                projSegX.push(centX[i], px, null);
+                projSegY.push(centY[i], py, null);
+                projPointsX.push(px);
+                projPointsY.push(py);
+            }
+
+            traces.push({
+                x: [-v1_x * 3.5, v1_x * 3.5], y: [-v1_y * 3.5, v1_y * 3.5],
+                mode: 'lines',
+                line: { color: '#75523c', width: 3 },
+                name: 'Подпространство PC₁'
+            });
+            traces.push({
+                x: projSegX, y: projSegY,
+                mode: 'lines',
+                line: { color: 'rgba(179, 74, 59, 0.35)', width: 1, dash: 'dot' },
+                name: 'Остаточные невязки e ⊥ PC₁',
+                hoverinfo: 'none'
+            });
+            traces.push({
+                x: centX, y: centY,
+                mode: 'markers',
+                marker: { color: 'rgba(126, 108, 96, 0.45)', size: 5 },
+                name: 'Исходные центрированные'
+            });
+            traces.push({
+                x: projPointsX, y: projPointsY,
+                mode: 'markers',
+                marker: { color: '#5f7a4e', size: 7 },
+                name: 'Проекции z_i = ⟨x_i, v₁⟩'
+            });
+            stepTitle = 'Шаг 4: Ортогональная проекция точек на ось PC₁';
+            explanationHtml = `<b>Шаг 4: Проекция на подпространство $PC_1$.</b> Каждая точка ортогонально проецируется на прямую $PC_1$: $z_i = \\langle x_{c,i}, v_1 \\rangle$. Пунктирные отрезки — невязки $e_i \\perp v_1$. 
+            По теореме Пифагора $\\|x_i\\|^2 = z_i^2 + \\|e_i\\|^2$. Отсюда фундаментальное тождество: <b>максимизация дисперсии проекций $\\sum z_i^2 \\to \\max$ строго эквивалентна минимизации ошибок реконструкции $\\sum \\|e_i\\|^2 \\to \\min$</b>!`;
+        } else if (step === 5) {
+            const recX = [], recY = [];
+            const recSegX = [], recSegY = [];
+
+            for (let i = 0; i < n; i++) {
+                const z = centX[i] * v1_x + centY[i] * v1_y;
+                const rx = muX + z * v1_x;
+                const ry = muY + z * v1_y;
+                recX.push(rx);
+                recY.push(ry);
+                recSegX.push(rawX[i], rx, null);
+                recSegY.push(rawY[i], ry, null);
+            }
+
+            traces.push({
+                x: recSegX, y: recSegY,
+                mode: 'lines',
+                line: { color: 'rgba(179, 74, 59, 0.35)', width: 1 },
+                name: 'Ошибка реконструкции ||x - x̂||',
+                hoverinfo: 'none'
+            });
+            traces.push({
+                x: rawX, y: rawY,
+                mode: 'markers',
+                marker: { color: 'rgba(126, 108, 96, 0.45)', size: 6 },
+                name: 'Истинные данные X'
+            });
+            traces.push({
+                x: recX, y: recY,
+                mode: 'markers',
+                marker: { color: '#5f7a4e', size: 7 },
+                name: 'Восстановленные данные X̂'
+            });
+            stepTitle = 'Шаг 5: Восстановление данных X̂ = μ + z v₁ᵀ в исходное пространство';
+            explanationHtml = `<b>Шаг 5: Восстановление $\\hat{X} = \\mu + z v_1^T$.</b> Одномерные координаты $z_i$ переводятся обратно в двумерное пространство. 
+            Мы сжали размерность данных в 2 раза ($D=2 \\to 1$), сохранив <b>${evr.toFixed(1)}%</b> информации. Это фундамент сжатия эмбеддингов, визуализации многомерных признаков и фильтрации шума.`;
         }
 
-        traces.push({
-            x: recSegX, y: recSegY,
-            mode: 'lines',
-            line: { color: 'rgba(179, 74, 59, 0.35)', width: 1 },
-            name: 'Ошибка реконструкции ||x - x̂||',
-            hoverinfo: 'none'
-        });
-        traces.push({
-            x: rawX, y: rawY,
-            mode: 'markers',
-            marker: { color: 'rgba(126, 108, 96, 0.45)', size: 6 },
-            name: 'Истинные данные X'
-        });
-        traces.push({
-            x: recX, y: recY,
-            mode: 'markers',
-            marker: { color: '#5f7a4e', size: 7 },
-            name: 'Восстановленные данные X̂'
-        });
+        const rangeLim = (step === 1 || step === 5) ? [-1.0, 4.5] : [-3.0, 3.0];
+        layout = {
+            title: { text: stepTitle, font: { size: 13.5, color: '#2a1d17' } },
+            height: 480,
+            autosize: true,
+            paper_bgcolor: '#ffffff',
+            plot_bgcolor: '#ffffff',
+            xaxis: { title: 'Признак x₁', range: rangeLim, zeroline: true, zerolinecolor: '#d4c5b9', gridcolor: '#f0ece6' },
+            yaxis: { title: 'Признак x₂', range: rangeLim, zeroline: true, zerolinecolor: '#d4c5b9', gridcolor: '#f0ece6', scaleanchor: 'x' },
+            margin: { l: 45, r: 25, t: 40, b: 60 },
+            legend: { orientation: 'h', y: -0.18, font: { size: 10 } },
+            showlegend: true
+        };
     }
-
-    const stepTitles = [
-        '',
-        'Шаг 1: Исходные сырые данные X и смещённый центр масс μ',
-        'Шаг 2: Центрирование данных X_c = X - μ (перенос начала координат в 0)',
-        'Шаг 3: Вычисление ковариации Σ и главных осей PC₁, PC₂ (спектральное разложение)',
-        'Шаг 4: Ортогональная проекция точек на ось PC₁ (минимизация суммы квадратов ошибок)',
-        'Шаг 5: Восстановление данных X̂ = μ + z v₁ᵀ в исходное пространство'
-    ];
-
-    const rangeLim = (step === 1 || step === 5) ? [-1.0, 4.5] : [-3.0, 3.0];
-
-    const layout = {
-        title: { text: stepTitles[step], font: { size: 13.5, color: '#2a1d17' } },
-        height: 478,
-        autosize: true,
-        paper_bgcolor: 'rgba(0,0,0,0)',
-        plot_bgcolor: 'rgba(0,0,0,0)',
-        xaxis: { title: 'Признак x₁', range: rangeLim, zeroline: true, zerolinecolor: '#e8e1d7', gridcolor: '#f0ece6' },
-        yaxis: { title: 'Признак x₂', range: rangeLim, zeroline: true, zerolinecolor: '#e8e1d7', gridcolor: '#f0ece6', scaleanchor: 'x' },
-        margin: { l: 45, r: 25, t: 40, b: 60 },
-        legend: { orientation: 'h', y: -0.18, font: { size: 10 } },
-        showlegend: true
-    };
 
     Plotly.react(plotEl, traces, layout, { responsive: true, displayModeBar: false });
 
     // Пояснение текущего шага
     const expEl = document.getElementById('pca-step-explanation');
     if (expEl) {
-        const explanations = [
-            '',
-            `<b>Шаг 1: Исходные данные $X$.</b> Выборочный центр масс $\\mu = (${muX.toFixed(2)}, ${muY.toFixed(2)})$ не равен нулю. 
-            <i>Критическая ловушка:</i> Если применить SVD к нецентрированным данным, первая найденная компонента направится не вдоль оси максимального разброса, а соединит начало координат с облаком данных, что исказит весь анализ!`,
-
-            `<b>Шаг 2: Центрирование $X_c = X - \\mu$.</b> Вычитаем среднее значение каждого признака. Облако сдвинулось в начало координат: $\\mathbb{E}[X_c] = 0$. 
-            Теперь выборочная ковариационная матрица $\\Sigma = \\frac{1}{N-1} X_c^T X_c$ строго измеряет взаимный разброс относительно математического ожидания.`,
-
-            `<b>Шаг 3: Главные компоненты $PC_1, PC_2$.</b> По спектральной теореме симметричная матрица ковариации $\\Sigma$ обладает ортонормированным базисом собственных векторов $v_1, v_2$. 
-            Вектор $v_1$ указывает направление <b>максимальной дисперсии</b> ($\lambda_1 = ${var1.toFixed(2)}$), а вектор $v_2$ строго перпендикулярен ему ($\lambda_2 = ${var2.toFixed(2)}$). Направление $PC_1$ объясняет <b>${evr.toFixed(1)}%</b> всей дисперсии выборки!`,
-
-            `<b>Шаг 4: Проекция на подпространство $PC_1$.</b> Каждая точка ортогонально проецируется на прямую $PC_1$: $z_i = \\langle x_{c,i}, v_1 \\rangle$. Пунктирные отрезки — невязки $e_i \\perp v_1$. 
-            По теореме Пифагора $\\|x_i\\|^2 = z_i^2 + \\|e_i\\|^2$. Отсюда фундаментальное тождество: <b>максимизация дисперсии проекций $\\sum z_i^2 \\to \\max$ строго эквивалентна минимизации ошибок реконструкции $\\sum \\|e_i\\|^2 \\to \\min$</b>!`,
-
-            `<b>Шаг 5: Восстановление $\\hat{X} = \\mu + z v_1^T$.</b> Одномерные координаты $z_i$ переводятся обратно в двумерное пространство. 
-            Мы сжали размерность данных в 2 раза ($D=2 \\to 1$), сохранив <b>${evr.toFixed(1)}%</b> информации. Это фундамент сжатия эмбеддингов, визуализации многомерных признаков и фильтрации шума.`
-        ];
-        expEl.innerHTML = explanations[step];
+        expEl.innerHTML = explanationHtml;
         if (window.renderMathInElement) {
             renderMathInElement(expEl, { delimiters: [{left: '$', right: '$', display: false}] });
         }
