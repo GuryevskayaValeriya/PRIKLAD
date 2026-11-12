@@ -922,6 +922,9 @@ function switchModule(modId) {
     document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
     document.querySelectorAll('.module-nav-group').forEach(grp => grp.style.display = 'none');
 
+    const mobBadge = document.getElementById('mobile-current-mod-badge');
+    if (mobBadge) mobBadge.textContent = `М${modId}`;
+
     const group1 = document.getElementById('nav-group-mod1');
     const group2 = document.getElementById('nav-group-mod2');
     const group3 = document.getElementById('nav-group-mod3');
@@ -972,7 +975,52 @@ function switchModule(modId) {
 }
 window.switchModule = switchModule;
 
+function setupSidebarToggle() {
+    const btnToggle = document.getElementById('btn-toggle-sidebar');
+    const btnExpand = document.getElementById('btn-expand-sidebar');
+
+    function toggleSidebar(forceState) {
+        const isCollapsed = (forceState !== undefined)
+            ? forceState
+            : !document.body.classList.contains('sidebar-collapsed');
+
+        document.body.classList.toggle('sidebar-collapsed', isCollapsed);
+        try {
+            localStorage.setItem('priklad_sidebar_collapsed', isCollapsed ? 'true' : 'false');
+        } catch (e) {}
+
+        // Пересчёт размеров активных графиков Plotly при изменении ширины контента
+        setTimeout(() => {
+            window.dispatchEvent(new Event('resize'));
+        }, 260);
+    }
+
+    // Восстановление сохранённого пользователем состояния
+    try {
+        if (localStorage.getItem('priklad_sidebar_collapsed') === 'true') {
+            document.body.classList.add('sidebar-collapsed');
+        }
+    } catch (e) {}
+
+    btnToggle?.addEventListener('click', () => toggleSidebar(true));
+    btnExpand?.addEventListener('click', () => toggleSidebar(false));
+
+    // Горячая клавиша: Ctrl+B (или Cmd+B) для быстрого скрытия/показа содержания
+    document.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
+            const tag = document.activeElement?.tagName?.toLowerCase();
+            if (tag === 'input' || tag === 'textarea') return;
+            e.preventDefault();
+            toggleSidebar();
+        }
+    });
+
+    window.toggleSidebar = toggleSidebar;
+}
+
 function setupNavigation() {
+    setupSidebarToggle();
+
     // Делегирование кликов по переключателям модулей и пунктам меню (поддерживает динамические модули)
     document.addEventListener('click', (e) => {
         const tab = e.target.closest('.btn-module-tab');
@@ -984,6 +1032,11 @@ function setupNavigation() {
 
         const navItem = e.target.closest('.nav-item');
         if (navItem) {
+            // На планшетах и мобильных экранах закрываем выдвижной ящик при переходе
+            document.body.classList.remove('sidebar-open');
+            const mobInd = document.getElementById('mobile-section-indicator');
+            if (mobInd) mobInd.textContent = navItem.textContent.trim();
+
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
             navItem.classList.add('active');
 
@@ -1281,7 +1334,49 @@ function rafThrottle(fn) {
     };
 }
 
+
+function setupMobileNav() {
+    const btnMobileToggle = document.getElementById('btn-mobile-sidebar-toggle');
+    const backdrop = document.getElementById('sidebar-backdrop');
+    const btnMobileMod = document.getElementById('btn-mobile-module-toggle');
+
+    btnMobileToggle?.addEventListener('click', () => {
+        document.body.classList.toggle('sidebar-open');
+    });
+
+    backdrop?.addEventListener('click', () => {
+        document.body.classList.remove('sidebar-open');
+    });
+
+    // Закрытие выдвижной панели по клавише Escape
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            document.body.classList.remove('sidebar-open');
+        }
+    });
+
+    // Кнопка быстрой смены модуля в мобильной шапке (циклически 1 -> 2 -> 3 -> 1)
+    btnMobileMod?.addEventListener('click', () => {
+        const activeTab = document.querySelector('.btn-module-tab.active');
+        const curMod = parseInt(activeTab?.getAttribute('data-module') || '1');
+        const nextMod = (curMod % 3) + 1;
+        if (window.switchModule) {
+            window.switchModule(String(nextMod));
+        }
+    });
+
+    // Глобальный пересчёт размеров графиков Plotly при изменении ориентации и размера экрана
+    window.addEventListener('resize', rafThrottle(() => {
+        document.querySelectorAll('.plot-container').forEach(el => {
+            if (el && el.data && window.Plotly) {
+                try { Plotly.Plots.resize(el); } catch (e) {}
+            }
+        });
+    }));
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+    setupMobileNav();
     setupNavigation();
     TTSController.init();
     DocxProcessor.init();
